@@ -131,7 +131,7 @@ def run_geo_pipeline(
         retstart += page_size
         if retstart >= total_found:
             break
-        if page.source != "geo":
+        if page.source not in {"geo", "geo_sqlite"}:
             break
 
     accepted = accepted[:target]

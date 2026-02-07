@@ -173,7 +173,20 @@ def _parse_geo_summary_payload(payload: dict, id_list: list[str]) -> list[dict]:
     return items
 
 
-def _build_sqlite_where_clause(query: str, species_filter: str) -> tuple[str, list[str]]:
+def _sql_like_any(expr_sql: str, tokens: list[str]) -> tuple[str, list[str]]:
+    if not tokens:
+        return "1=1", []
+    clause = "(" + " OR ".join([f"{expr_sql} LIKE ?" for _ in tokens]) + ")"
+    params = [f"%{tok}%" for tok in tokens]
+    return clause, params
+
+
+def _build_sqlite_where_clause(
+    query: str,
+    species_filter: str,
+    experiment_filter: str,
+    state_filter: str,
+) -> tuple[str, list[str]]:
     text = (query or GEO_DEFAULT_QUERY).strip().lower()
     tokens = [tok for tok in re.split(r"\s+", text) if tok]
 
@@ -196,6 +209,56 @@ def _build_sqlite_where_clause(query: str, species_filter: str) -> tuple[str, li
         )
         params.append(f"%{species}%")
 
+    gse_text_expr = "lower(g.title || ' ' || ifnull(g.summary,'') || ' ' || ifnull(g.type,''))"
+    state_text_expr = "lower(g.title || ' ' || ifnull(g.summary,''))"
+
+    exp = experiment_filter.strip()
+    if exp == "Single-cell RNA-seq":
+        clause, p = _sql_like_any(gse_text_expr, ["single cell", "single-cell", "scrna", "snrna"])
+        clauses.append(clause)
+        params.extend(p)
+    elif exp == "RNA-seq":
+        clause, p = _sql_like_any(gse_text_expr, ["rna-seq", "rnaseq", "high throughput sequencing", "transcriptome sequencing"])
+        clauses.append(clause)
+        params.extend(p)
+    elif exp == "Microarray":
+        clause, p = _sql_like_any(gse_text_expr, ["microarray", "expression profiling by array"])
+        clauses.append(clause)
+        params.extend(p)
+    elif exp == "ChIP-seq":
+        clause, p = _sql_like_any(gse_text_expr, ["chip-seq", "chipseq"])
+        clauses.append(clause)
+        params.extend(p)
+    elif exp == "ATAC-seq":
+        clause, p = _sql_like_any(gse_text_expr, ["atac-seq", "atacseq"])
+        clauses.append(clause)
+        params.extend(p)
+
+    state = state_filter.strip()
+    disease_tokens = ["disease", "patient", "tumor", "cancer", "diabetes", "case"]
+    healthy_tokens = ["healthy", "normal", "control", "wild type", "non-disease"]
+    treated_tokens = ["treated", "treatment", "drug", "therapy", "stimulated"]
+    untreated_tokens = ["untreated", "vehicle", "placebo", "mock", "baseline"]
+
+    if state == "Disease vs Healthy":
+        c1, p1 = _sql_like_any(state_text_expr, disease_tokens)
+        c2, p2 = _sql_like_any(state_text_expr, healthy_tokens)
+        clauses.append(f"({c1} AND {c2})")
+        params.extend(p1 + p2)
+    elif state == "Treated vs Untreated":
+        c1, p1 = _sql_like_any(state_text_expr, treated_tokens)
+        c2, p2 = _sql_like_any(state_text_expr, untreated_tokens)
+        clauses.append(f"({c1} AND {c2})")
+        params.extend(p1 + p2)
+    elif state == "Disease only":
+        c1, p1 = _sql_like_any(state_text_expr, disease_tokens)
+        clauses.append(c1)
+        params.extend(p1)
+    elif state == "Healthy only":
+        c1, p1 = _sql_like_any(state_text_expr, healthy_tokens)
+        clauses.append(c1)
+        params.extend(p1)
+
     where_sql = " AND ".join(clauses) if clauses else "1=1"
     return where_sql, params
 
@@ -210,10 +273,13 @@ def _search_geo_datasets_sqlite(
 ) -> GEOSearchResult:
     requested_retmax = max(1, int(retmax))
     fetch_retmax = requested_retmax
-    if species_filter.strip() or experiment_filter.strip() not in ("", "All"):
-        fetch_retmax = min(1000, max(requested_retmax * 5, requested_retmax))
 
-    where_sql, where_params = _build_sqlite_where_clause(query=query, species_filter=species_filter)
+    where_sql, where_params = _build_sqlite_where_clause(
+        query=query,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+    )
     offset = max(0, int(retstart))
 
     with sqlite3.connect(str(GEO_SQLITE_PATH)) as conn:
@@ -283,18 +349,11 @@ def _search_geo_datasets_sqlite(
             }
         )
 
-    items = filter_geo_items(
-        items,
-        species_filter=species_filter,
-        experiment_filter=experiment_filter,
-        state_filter=state_filter,
-    )
-    items = items[:requested_retmax]
     return GEOSearchResult(
         source="geo_sqlite",
         query=query,
         total_found=total_found,
-        items=items,
+        items=items[:requested_retmax],
     )
 
 
