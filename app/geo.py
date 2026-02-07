@@ -383,7 +383,7 @@ def save_loaded_geo_selection(loaded_json_path: Path, loaded_csv_path: Path, sou
     loaded_items = []
     for row in items:
         identifier = str(row.get("accession") or row.get("uid") or "")
-        if identifier and identifier in selected:
+        if identifier and identifier in selected and bool(row.get("analyzable", False)):
             loaded_items.append(row)
 
     loaded_payload = {

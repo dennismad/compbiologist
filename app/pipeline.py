@@ -78,7 +78,8 @@ def run_geo_pipeline(
         state_filter=state_filter,
     )
     filtered_items = enrich_geo_items(result.items)
-    annotated_items = annotate_items_analyzable(filtered_items, cache_dir=GEO_MATRIX_CACHE_DIR)
+    check_limit = len(filtered_items) if only_analyzable else 40
+    annotated_items = annotate_items_analyzable(filtered_items, cache_dir=GEO_MATRIX_CACHE_DIR, check_limit=check_limit)
     returned_before_analyzable_filter = len(annotated_items)
     if only_analyzable:
         annotated_items = [x for x in annotated_items if x.get("analyzable")]
@@ -173,7 +174,7 @@ def load_cached_geo_payload() -> dict:
     enriched_items = enrich_geo_items(payload.get("items", []))
     for row in enriched_items:
         if "analyzable" not in row:
-            row["analyzable"] = True
+            row["analyzable"] = False
         if "analyzable_detail" not in row:
             row["analyzable_detail"] = "unknown"
     payload["items"] = enriched_items
@@ -201,9 +202,11 @@ def load_cached_loaded_geo_payload() -> dict:
         }
 
     enriched_items = enrich_geo_items(payload.get("items", []))
-    payload["items"] = enriched_items
-    payload["insights"] = build_geo_insights(enriched_items)
-    payload["returned"] = len(enriched_items)
+    annotated_items = annotate_items_analyzable(enriched_items, cache_dir=GEO_MATRIX_CACHE_DIR, check_limit=len(enriched_items))
+    analyzable_items = [x for x in annotated_items if x.get("analyzable")]
+    payload["items"] = analyzable_items
+    payload["insights"] = build_geo_insights(analyzable_items)
+    payload["returned"] = len(analyzable_items)
     return payload
 
 

@@ -81,7 +81,7 @@
                 {% for row in geo_search_items %}
                   {% set dataset_id = row.accession or row.uid %}
                   <tr>
-                    <td><input type="checkbox" name="selected_ids" value="{{ dataset_id }}" /></td>
+                    <td><input type="checkbox" name="selected_ids" value="{{ dataset_id }}" {% if not row.analyzable %}disabled{% endif %} /></td>
                     <td>{{ dataset_id }}</td>
                     <td>{{ row.title }}</td>
                     <td>{{ row.organism }}</td>
@@ -102,6 +102,7 @@
               </tbody>
             </table>
           </form>
+          <p class="note">Only rows marked analyzable are selectable for loading into real DE analysis.</p>
         {% else %}
           <p class="note">No GEO search results yet. Run a GEO search first.</p>
         {% endif %}

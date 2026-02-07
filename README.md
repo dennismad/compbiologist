@@ -24,6 +24,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
   - species text filter
   - experiment-type filter (`Single-cell RNA-seq`, `RNA-seq`, `Microarray`, etc.)
   - `Only analyzable datasets` pre-check (attempts to keep only GEO entries with parseable expression matrices)
+  - non-analyzable rows are not selectable for loading
 - After search, select datasets and click `Load Selected Datasets`.
 - GEO detail tables/charts are shown only for loaded datasets.
 - Run `State Comparison Analysis` to generate:

@@ -5,6 +5,9 @@
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
   "state_filter": "All",
+  "only_analyzable": true,
+  "returned_before_analyzable_filter": 15,
+  "returned_after_analyzable_filter": 6,
   "items": [
     {
       "uid": "200317266",
@@ -20,23 +23,9 @@
       "experiment_type": "RNA-seq",
       "state_profile": "Disease only",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE317266",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200297587",
-      "accession": "GSE297587",
-      "title": "iCLIP analysis of full-length and deletion mutants of myc-LARP6",
-      "summary": "Intrinsically disordered regions (IDRs) are prevalent in RNA-binding proteins (RBPs), yet their roles in RNA interactions remain poorly defined. We examined the structured and disordered RNA-binding activities of LARP6, an RBP with a diverse RNA-binding repertoire. U87 glioblastoma cells stably expressing myc-tagged full-length or various deletion mutants of LARP6 under a doxycycline switch were induced to express myc-LARP6 variants at near endogenous levels, before individual-nucleotide resolution UV-crosslinking and immunoprecipitation (iCLIP) was performed to assess each variants' RNA-binding targets on the transcriptome. A total RNA-seq experiment was also performed on the cells in parallel to distinguish between changes in RNA bidning and those that are affected via expression level variations.",
-      "organism": "Homo sapiens",
-      "n_samples": 30,
-      "gse": "297587",
-      "pubmed_id": "",
-      "pdat": "2026/01/22",
-      "gds_type": "Other; Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Unclear",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE297587",
-      "pubmed_link": ""
+      "pubmed_link": "",
+      "analyzable": true,
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "200309688",
@@ -52,55 +41,9 @@
       "experiment_type": "RNA-seq",
       "state_profile": "Disease vs Healthy",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE309688",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200283452",
-      "accession": "GSE283452",
-      "title": "HUMAN ALVEOLAR MACROPHAGE FUNCTION IS IMPAIRED IN TUBERCULOSIS CONTACTS WITH DIABETES",
-      "summary": "Patients with type 2 diabetes (T2D) are more susceptible to Mycobacterium tuberculosis (M.tb) infection and severe tuberculosis (TB). The underlying mechanisms contributing to this remain largely unknown. To fill this critical knowledge gap, we obtained human alveolar macrophages (HAMs) and monocyte-derived macrophages (MDMs) from TB-exposed individuals with and without T2D in South Africa. We infected HAMs and MDMs ex vivo with live M.tb then collected RNA for RNAseq after 2, 24, 72h.",
-      "organism": "Homo sapiens",
-      "n_samples": 89,
-      "gse": "283452",
-      "pubmed_id": "",
-      "pdat": "2025/12/31",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease only",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE283452",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200263483",
-      "accession": "GSE263483",
-      "title": "Effects of intrauterine hyperglycemia on offspring development in gestational diabetes mellitus based on placental transcriptomics",
-      "summary": "Gestational diabetes (GDM) refers to diabetes diagnosed as diabetes in the second or third trimester of pregnancy, but not obvious before pregnancy. It is one of the most common complications of pregnancy, which can lead to perinatal asphyxia, neonatal hypoglycemia, macrosomia, cardiovascular abnormalities, obesity and other short-term and long-term adverse outcomes of the offspring. This study explores the differential expression of transcriptome between GDM and non GDM placenta, and explores the impact of subtle metabolic changes in the placenta on fetal growth and development during GDM in pregnant women.",
-      "organism": "Homo sapiens",
-      "n_samples": 16,
-      "gse": "263483",
-      "pubmed_id": "",
-      "pdat": "2025/12/30",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease vs Healthy",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE263483",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200314698",
-      "accession": "GSE314698",
-      "title": "Pancreatic volume and immunological biomarkers predict checkpoint inhibitor-associated autoimmune diabetes in humans.",
-      "summary": "Background: Checkpoint inhibitor-associated autoimmune diabetes (CIADM) is a rare but life-altering complication of immune checkpoint inhibitor (ICI) therapy. Biomarkers that predict type 1 diabetes (T1D) are unreliable for CIADM. Aim To identify biomarkers for prediction of CIADM. Methods: From our prospective biobank, 14 CIADM patients who had metastatic melanoma treated with anti-PD-1\u00b1anti CTLA4 were identified. Controls were selected from the same biobank, matched 2:1. Pre-treatment, on-ICI and post-CIADM serum and peripheral blood mononuclear cells (PBMCs) were analysed. Serum was analysed for T1D autoantibodies, C-peptide, glucose and cytokines. PBMCs were profiled using flow cytometry. Pancreatic volume was measured using CT volumetry. Results: Before treatment, CIADM patients had smaller pancreatic volume (27% reduction, p=0.044) and higher anti-GAD antibody titres (median 2.9 versus 0, p=0.01). They had significantly higher baseline proportions of Th17 helper cells (p=0.03), higher CD4+ central memory cells (p=0.04) and lower na\u00efve CD4+ cells (p=0.01). With ICI treatment, greater declines in pancreatic volume were seen in CIADM patients (p<0.0001). Activated CD4+ subsets increased significantly in CIADM and controls with immune-related adverse effects (IRAE) but not controls without IRAE. Using only pre-treatment results, pancreatic volume, anti-GAD antibody titre and baseline immune flow profile were highly predictive of CIADM development, with an area under the curve (AUC) of >0.96. Conclusions: People who develop CIADM are immunologically predisposed and have antecedent pancreatic and immunological changes that accurately predict disease with excellent sensitivity. These biomarkers could be used to guide ICI use, particularly when planning treatment for low-risk tumours.",
-      "organism": "Homo sapiens",
-      "n_samples": 83,
-      "gse": "314698",
-      "pubmed_id": "",
-      "pdat": "2025/12/26",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease vs Healthy",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE314698",
-      "pubmed_link": ""
+      "pubmed_link": "",
+      "analyzable": true,
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "200311535",
@@ -116,23 +59,9 @@
       "experiment_type": "RNA-seq",
       "state_profile": "Disease only",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE311535",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200296196",
-      "accession": "GSE296196",
-      "title": "Enhancement of activation-induced T cell proliferation by SIRPG in a CD47-independent manner",
-      "summary": "SIRPG, a primate-specific type 1 transmembrane protein in the Signal Regulatory Protein (SIRP) family, is predominantly expressed in T cells. It contains a short cytoplasmic domain, which does not contain any known signaling motif, and its only known ligand is CD47. Several genetic variations in SIRPG, including the V263A (rs6043409) polymorphism, linked to increased type 1 diabetes risk, highlight its potential importance. However, its expression and physiological role remain largely unclear due to its absence in rodents. Here, we demonstrate that SIRPG and GzmB exhibit near mutually exclusive expression in resting peripheral CD8+ T cells. We further show that SIRPG serves as a valuable marker for GzmK-expressing CD8+ T cells in peripheral blood and inflamed synovial fluid and that its expression in both CD4+ and CD8+ T cells is upregulated by anti-CD3 stimulation, with further enhancement by the TNF\u03b1 inhibitor adalimumab, but not certolizumab. While SIRPG ablation minimally affects T cell activation and IFN\u03b3/TNF\u03b1 production, it impairs the expression of mitosis-regulating genes like UBE2C and TOP2A, leading to reduced proliferation, and alters the expression of certain activation-induced surface molecules, including CRTAM. Notably, SIRPG-mediated proliferation and CRTAM expression are cell-autonomous and CD47-independent. Structural and functional analyses reveal that SIRPG-driven proliferation is independent of its extracellular D1 domain, not significantly affected by the V263 variant, but dependent on its cytoplasmic domain. Collectively, our findings offer novel insights into the expression, function, and mechanism of action of SIRPG in T cells.",
-      "organism": "Homo sapiens",
-      "n_samples": 46,
-      "gse": "296196",
-      "pubmed_id": "",
-      "pdat": "2025/12/10",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease only",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE296196",
-      "pubmed_link": ""
+      "pubmed_link": "",
+      "analyzable": true,
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "200260717",
@@ -148,23 +77,9 @@
       "experiment_type": "RNA-seq",
       "state_profile": "Disease only",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE260717",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200301956",
-      "accession": "GSE301956",
-      "title": "Identification of Circulating miRNA Alterations in Diabetes Patients Excluding Periodontitis Effects: Insights into Target Gene Downregulation in Diabetic Complications",
-      "summary": "Circulating exosomal microRNAs (miRNAs) are important regulators of gene expression in diabetes mellitus (DM). In this study, we analyzed plasma exosomal miRNAs from normal individuals and patients with PD or PD combined with diabetes (PDDM). Differentially expressed miRNAs were identified using small RNA-seq, and their target genes were validated using bulk RNA-seq datasets from tissues related to diabetic complications. Analysis of target genes revealed biologically meaningful pathways that were consistently involved across affected tissues, providing insight into systemic miRNA\u2013mRNA regulation in diabetes.",
-      "organism": "Homo sapiens",
-      "n_samples": 43,
-      "gse": "301956",
-      "pubmed_id": "",
-      "pdat": "2025/12/04",
-      "gds_type": "Non-coding RNA profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease vs Healthy",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE301956",
-      "pubmed_link": ""
+      "pubmed_link": "",
+      "analyzable": true,
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "200311533",
@@ -180,55 +95,9 @@
       "experiment_type": "RNA-seq",
       "state_profile": "Disease vs Healthy",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE311533",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200310542",
-      "accession": "GSE310542",
-      "title": "A single-nucleus dataset sampling subcutaneous white adipose from living donors to study familial partial lipodystrophy 2",
-      "summary": "Familial partial lipodystrophy 2 (FPLD2) is a rare disease characterized by adipose tissue loss and redistribution, and metabolic dysfunction. FPLD2 is caused by pathogenic variants in the LMNA gene, encoding nuclear lamins A/C, structural proteins that control nuclear function and gene expression. However, the mechanisms driving adipocyte loss in FPLD2 remain poorly defined. In this study, we recruited eight families with developing or established FPLD2 and performed clinical, histological, and transcriptomic analyses of subcutaneous adipose tissue biopsies. Bulk and single-nuclei RNA-sequencing revealed suppression of lipid metabolism and mitochondrial pathways, alongside increased inflammation. These signatures were mirrored in tamoxifen-inducible adipocyte-specific Lmna knockout mice, in which lamin A/C-deficient adipocytes shrank and disappeared. Lmna-deficient fibroblasts shared similar gene expression changes, linked to altered chromatin accessibility, underscoring lamin A/C\u2019s potential regulatory role in lipid metabolism and inflammatory programs. By directly comparing atrophic and hypertrophic adipose depots in FPLD2, and integrating human, mouse, and in vitro models, this study provides new insights into disease progression and potential therapeutic targets.",
-      "organism": "Homo sapiens",
-      "n_samples": 30,
-      "gse": "310542",
-      "pubmed_id": "",
-      "pdat": "2025/11/22",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease vs Healthy",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE310542",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200284583",
-      "accession": "GSE284583",
-      "title": "Pan-modification profiling facilitates a cross-evolutionary dissection of the thermoregulated ribosomal epitranscriptome - HsapiScere",
-      "summary": "Over 170 modifications are deposited on RNA, across the tree of life. A major bottleneck to systematically dissecting RNA modifications has been the lack of methods allowing to acquire systematic, high-confidence maps of many RNA modifications and at scale. Here we have developed Pan-Mod-seq, which permits de-novo, sensitive and specific identification of 16 distinct modifications in dozens of samples in parallel. We applied Pan-Mod-seq to RNA from 14 different species from all 3 domains of life, most of which sampled under highly variable chemical/physical/biological gradients, aiming to systematically explore the plasticity of rRNA modifications. While dynamically modified sites are relatively rare in mesophiles, we find that these are widespread in hyperthermophiles, where ~50% of identified modifications were induced with temperature. We focused on dissection of three key dynamically induced modifications: m5C, ac4C and \u03a8. We uncover an m5C program encompassing dozens of targets across both rRNA subunits, all of which are dramatically induced with growth temperature in two of the sampled hyperthermophiles. In both cases m5C is introduced at a single consensus motif, via a single enzyme which is essential for growth at higher temperatures. ac4C in turn is dynamically induced among all three sampled hyperthermophiles at hundreds of sites, also at a single consensus motif. Remarkably, the methylation and acetylation overlap, and together form a tandemly modified temperature induced G-m5C-ac4C-G sequence motif.  Temperature-dependent induction of both enzymes can be recapitulated in vitro, establishing that it is an intrinsic property of the two enzymes rather than externally regulated. We obtain high-resolution cryoEM structures of ribosomes from WT strains at low and high temperatures and ones deleted of the methylating enzyme, and identify numerous mechanisms via which m5C confers structural stability. Finally, we also uncover a systematic induction in \u03a8 levels in T. kodakarensis, and reveal that it is largely coordinated by a single temperature-induced sRNA guiding pseudouridine formation at an unprecedented number of targets, whose loss results in growth deficiency at higher temperatures. Our findings offer a wide and systematic view of rRNA modification plasticity across representative species sampled from the tree of life, dissect the ability of different modifications to contribute to the stability of ribosomes at higher temperatures, and present a methodology allowing an unprecedented view on the the rRNA epitranscriptome in health and in disease.",
-      "organism": "Saccharomyces cerevisiae; Homo sapiens",
-      "n_samples": 34,
-      "gse": "284583",
-      "pubmed_id": "",
-      "pdat": "2025/11/13",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease only",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE284583",
-      "pubmed_link": ""
-    },
-    {
-      "uid": "200284582",
-      "accession": "GSE284582",
-      "title": "Pan-modification profiling facilitates a cross-evolutionary dissection of the thermoregulated ribosomal epitranscriptome - Hsapi",
-      "summary": "Over 170 modifications are deposited on RNA, across the tree of life. A major bottleneck to systematically dissecting RNA modifications has been the lack of methods allowing to acquire systematic, high-confidence maps of many RNA modifications and at scale. Here we have developed Pan-Mod-seq, which permits de-novo, sensitive and specific identification of 16 distinct modifications in dozens of samples in parallel. We applied Pan-Mod-seq to RNA from 14 different species from all 3 domains of life, most of which sampled under highly variable chemical/physical/biological gradients, aiming to systematically explore the plasticity of rRNA modifications. While dynamically modified sites are relatively rare in mesophiles, we find that these are widespread in hyperthermophiles, where ~50% of identified modifications were induced with temperature. We focused on dissection of three key dynamically induced modifications: m5C, ac4C and \u03a8. We uncover an m5C program encompassing dozens of targets across both rRNA subunits, all of which are dramatically induced with growth temperature in two of the sampled hyperthermophiles. In both cases m5C is introduced at a single consensus motif, via a single enzyme which is essential for growth at higher temperatures. ac4C in turn is dynamically induced among all three sampled hyperthermophiles at hundreds of sites, also at a single consensus motif. Remarkably, the methylation and acetylation overlap, and together form a tandemly modified temperature induced G-m5C-ac4C-G sequence motif.  Temperature-dependent induction of both enzymes can be recapitulated in vitro, establishing that it is an intrinsic property of the two enzymes rather than externally regulated. We obtain high-resolution cryoEM structures of ribosomes from WT strains at low and high temperatures and ones deleted of the methylating enzyme, and identify numerous mechanisms via which m5C confers structural stability. Finally, we also uncover a systematic induction in \u03a8 levels in T. kodakarensis, and reveal that it is largely coordinated by a single temperature-induced sRNA guiding pseudouridine formation at an unprecedented number of targets, whose loss results in growth deficiency at higher temperatures. Our findings offer a wide and systematic view of rRNA modification plasticity across representative species sampled from the tree of life, dissect the ability of different modifications to contribute to the stability of ribosomes at higher temperatures, and present a methodology allowing an unprecedented view on the the rRNA epitranscriptome in health and in disease.",
-      "organism": "Homo sapiens",
-      "n_samples": 34,
-      "gse": "284582",
-      "pubmed_id": "",
-      "pdat": "2025/11/13",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease only",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE284582",
-      "pubmed_link": ""
+      "pubmed_link": "",
+      "analyzable": true,
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "200273001",
@@ -244,7 +113,9 @@
       "experiment_type": "RNA-seq",
       "state_profile": "Unclear",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE273001",
-      "pubmed_link": ""
+      "pubmed_link": "",
+      "analyzable": true,
+      "analyzable_detail": "supplementary"
     }
   ]
 }
