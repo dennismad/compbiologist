@@ -3,12 +3,12 @@
   "source": "geo_sqlite",
   "error": "",
   "returned": 20,
-  "total_found": 47,
+  "total_found": 61,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
   "state_filter": "Treated vs Untreated",
   "only_analyzable": true,
   "requested_retmax": 20,
-  "returned_before_analyzable_filter": 47,
+  "returned_before_analyzable_filter": 59,
   "returned_after_analyzable_filter": 20
 }
