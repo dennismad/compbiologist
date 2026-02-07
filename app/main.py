@@ -150,12 +150,30 @@ def create_app() -> Flask:
         padj_cutoff = min(max(padj_cutoff, 1e-6), 1.0)
         log2fc_cutoff = min(max(log2fc_cutoff, 0.1), 5.0)
 
+        sample_ids = request.form.getlist("sample_ids")
+        sample_groups = request.form.getlist("sample_groups")
+        group_a_samples: list[str] = []
+        group_b_samples: list[str] = []
+        if sample_ids and len(sample_ids) == len(sample_groups):
+            for sid, group_code in zip(sample_ids, sample_groups):
+                sid_val = sid.strip()
+                if not sid_val:
+                    continue
+                if group_code == "A":
+                    group_a_samples.append(sid_val)
+                elif group_code == "B":
+                    group_b_samples.append(sid_val)
+        else:
+            # Backward-compatible fallback if older form fields are posted.
+            group_a_samples = request.form.getlist("group_a_samples")
+            group_b_samples = request.form.getlist("group_b_samples")
+
         manual_choice = {
             "gse": request.form.get("manual_gse", "").strip(),
             "group_a_name": request.form.get("group_a_name", "Group A").strip() or "Group A",
             "group_b_name": request.form.get("group_b_name", "Group B").strip() or "Group B",
-            "group_a_samples": request.form.getlist("group_a_samples"),
-            "group_b_samples": request.form.getlist("group_b_samples"),
+            "group_a_samples": group_a_samples,
+            "group_b_samples": group_b_samples,
         }
 
         run_comparison_analysis(

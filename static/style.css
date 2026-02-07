@@ -205,18 +205,24 @@ footer {
 }
 
 
-.multi-select {
-  width: 100%;
-  min-height: 220px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 0.4rem;
-  background: white;
+.sample-annotation {
+  max-width: 760px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.35;
 }
 
-.sample-annotation {
-  max-width: 680px;
-  white-space: normal;
-  word-break: break-word;
-  font-size: 0.9rem;
+.sample-id-cell {
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.sample-group-select {
+  min-width: 150px;
+  width: 100%;
+  padding: 0.35rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
 }

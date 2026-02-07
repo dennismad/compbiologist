@@ -203,48 +203,45 @@
                 </label>
               </div>
 
-              <div class="two-col">
-                <div>
-                  <h4>Group A Samples (select at least 2)</h4>
-                  <p class="note">Use Cmd/Ctrl + click to select multiple samples.</p>
-                  <select name="group_a_samples" multiple size="12" class="multi-select">
-                    {% for opt in analysis.group_choice.sample_options %}
-                      <option value="{{ opt.id }}" {% if opt.id in analysis.group_choice.suggested_group_a %}selected{% endif %}>{{ opt.id }} | {{ opt.label }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-                <div>
-                  <h4>Group B Samples (select at least 2)</h4>
-                  <p class="note">Use Cmd/Ctrl + click to select multiple samples.</p>
-                  <select name="group_b_samples" multiple size="12" class="multi-select">
-                    {% for opt in analysis.group_choice.sample_options %}
-                      <option value="{{ opt.id }}" {% if opt.id in analysis.group_choice.suggested_group_b %}selected{% endif %}>{{ opt.id }} | {{ opt.label }}</option>
-                    {% endfor %}
-                  </select>
-                </div>
-              </div>
-
-              <h4>Sample Metadata</h4>
+              <h4>Sample Assignment</h4>
+              <p class="note">Assign each sample to Group A, Group B, or Exclude. At least 2 samples are required in each analysis group.</p>
               <table>
                 <thead>
                   <tr>
                     <th>Sample ID</th>
+                    <th>Assign</th>
                     <th>Suggested Group</th>
                     <th>Annotation</th>
                   </tr>
                 </thead>
                 <tbody>
                   {% for opt in analysis.group_choice.sample_options %}
+                    {% set suggested = 'Exclude' %}
+                    {% if opt.id in analysis.group_choice.suggested_group_a %}
+                      {% set suggested = analysis.group_choice.group_a_name %}
+                    {% elif opt.id in analysis.group_choice.suggested_group_b %}
+                      {% set suggested = analysis.group_choice.group_b_name %}
+                    {% endif %}
+                    {% set default_code = 'X' %}
+                    {% if opt.id in analysis.group_choice.suggested_group_a %}
+                      {% set default_code = 'A' %}
+                    {% elif opt.id in analysis.group_choice.suggested_group_b %}
+                      {% set default_code = 'B' %}
+                    {% endif %}
                     <tr>
-                      <td>{{ opt.id }}</td>
+                      <td class="sample-id-cell">
+                        {{ opt.id }}
+                        <input type="hidden" name="sample_ids" value="{{ opt.id }}" />
+                      </td>
                       <td>
-                        {% if opt.id in analysis.group_choice.suggested_group_a %}
-                          {{ analysis.group_choice.group_a_name }}
-                        {% elif opt.id in analysis.group_choice.suggested_group_b %}
-                          {{ analysis.group_choice.group_b_name }}
-                        {% else %}
-                          Unassigned
-                        {% endif %}
+                        <select name="sample_groups" class="sample-group-select">
+                          <option value="A" {% if default_code == 'A' %}selected{% endif %}>{{ analysis.group_choice.group_a_name }}</option>
+                          <option value="B" {% if default_code == 'B' %}selected{% endif %}>{{ analysis.group_choice.group_b_name }}</option>
+                          <option value="X" {% if default_code == 'X' %}selected{% endif %}>Exclude</option>
+                        </select>
+                      </td>
+                      <td>
+                        {{ suggested }}
                       </td>
                       <td class="sample-annotation">{{ opt.label }}</td>
                     </tr>

@@ -1,14 +1,14 @@
 {
-  "query": "diabetes",
+  "query": "NASH",
   "source": "geo_sqlite",
   "error": "",
-  "returned": 20,
-  "total_found": 61,
+  "returned": 1,
+  "total_found": 1,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
-  "state_filter": "Disease vs Healthy",
+  "state_filter": "Treated vs Untreated",
   "only_analyzable": true,
   "requested_retmax": 20,
-  "returned_before_analyzable_filter": 60,
-  "returned_after_analyzable_filter": 20
+  "returned_before_analyzable_filter": 1,
+  "returned_after_analyzable_filter": 1
 }

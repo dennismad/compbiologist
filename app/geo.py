@@ -317,7 +317,7 @@ def _search_geo_datasets_sqlite(
         collected: list[dict] = []
         base_offset = offset
         batch_size = max(fetch_retmax, 200)
-        saw_full_batch = False
+        has_more = False
 
         while len(collected) < fetch_retmax:
             base_rows = conn.execute(
@@ -340,12 +340,11 @@ def _search_geo_datasets_sqlite(
 
             if not base_rows:
                 break
-            saw_full_batch = len(base_rows) == batch_size
 
             accessions = [str(r["accession"] or "") for r in base_rows if str(r["accession"] or "")]
             species_map = _fetch_species_map(conn, accessions)
 
-            for r in base_rows:
+            for idx, r in enumerate(base_rows):
                 accession = str(r["accession"] or "").strip()
                 organism, n_samples = species_map.get(accession, ("", 0))
                 organism = organism or ""
@@ -364,6 +363,17 @@ def _search_geo_datasets_sqlite(
                     }
                 )
                 if len(collected) >= fetch_retmax:
+                    if species:
+                        for r2 in base_rows[idx + 1 :]:
+                            acc2 = str(r2["accession"] or "").strip()
+                            org2 = str(species_map.get(acc2, ("", 0))[0] or "").lower()
+                            if species in org2:
+                                has_more = True
+                                break
+                    elif idx + 1 < len(base_rows):
+                        has_more = True
+                    if not has_more and len(base_rows) == batch_size:
+                        has_more = True
                     break
 
             base_offset += len(base_rows)
@@ -372,7 +382,7 @@ def _search_geo_datasets_sqlite(
 
     rows = collected[:fetch_retmax]
     total_found = offset + len(rows)
-    if saw_full_batch:
+    if has_more:
         total_found += 1
 
     items: list[dict] = []
