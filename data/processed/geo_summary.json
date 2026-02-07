@@ -1,13 +1,13 @@
 {
   "query": "diabetes",
-  "source": "geo",
-  "returned": 15,
-  "total_found": 1202,
+  "source": "sample_fallback",
+  "returned": 3,
+  "total_found": 3,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
-  "state_filter": "All",
+  "state_filter": "Treated vs Untreated",
   "only_analyzable": true,
-  "requested_retmax": 15,
-  "returned_before_analyzable_filter": 50,
-  "returned_after_analyzable_filter": 15
+  "requested_retmax": 100,
+  "returned_before_analyzable_filter": 3,
+  "returned_after_analyzable_filter": 3
 }

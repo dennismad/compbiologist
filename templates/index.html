@@ -57,6 +57,9 @@
           Returned: {{ geo_search_summary.returned }}{% if geo_search_summary.only_analyzable %} (from {{ geo_search_summary.returned_before_analyzable_filter }} prefiltered){% endif %} |
           Total found: {{ geo_search_summary.total_found }}
         </p>
+        {% if geo_search_summary.source == "geo_error" %}
+          <p class="note">GEO API request failed. Check network/API limits and rerun search.</p>
+        {% endif %}
 
         {% if geo_search_items %}
           <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
@@ -255,6 +258,12 @@
             <p class="note">
               The selected dataset does not expose a usable expression matrix for this pipeline.
               Load a different GSE (with tabular expression/count matrix files) and rerun analysis.
+            </p>
+          {% elif analysis.metadata.mode == "missing_dependency" %}
+            <h3>Real Analysis Blocked</h3>
+            <p class="note">
+              DESeq2 analysis requires the `pydeseq2` package in your environment.
+              Install dependencies and rerun analysis.
             </p>
           {% elif analysis.metadata.n_genes > 0 %}
             <section class="cards">

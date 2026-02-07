@@ -12,6 +12,8 @@ Minimal starter for a virtual computational biologist with:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# Optional but recommended for faster/higher-rate NCBI calls:
+export NCBI_API_KEY="your_ncbi_api_key"
 python -m app.main
 ```
 
@@ -31,7 +33,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
   - volcano plot
   - top up/down genes
   - pathway enrichment (up and down)
-  - real GEO matrix differential expression (when a selected GSE has usable series-matrix + sample-group labels)
+  - real GEO matrix differential expression using DESeq2 (`pydeseq2`, counts-only)
 - if automatic grouping fails, the UI now requires manual sample-group selection before real DE can run
   - current implementation analyzes one loaded GSE at a time (manual group selection supported when auto-detection fails)
 
@@ -69,4 +71,5 @@ make run
 ## Notes
 
 - Primary public sources: UniProt REST API and NCBI E-utilities (GEO).
-- If either API is unavailable, the app uses bundled sample data so the UI still works.
+- GEO search responses and analyzability checks are cached locally in `data/processed/geo_cache.json`.
+- If GEO API requests fail, the UI now shows `Source: geo_error` instead of returning unrelated sample datasets.

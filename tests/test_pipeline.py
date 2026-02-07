@@ -70,6 +70,11 @@ def test_run_geo_load_selection_saves_subset(monkeypatch, tmp_path):
     monkeypatch.setattr(pipeline, "GEO_LOADED_JSON_PATH", tmp_path / "loaded.json")
     monkeypatch.setattr(pipeline, "GEO_LOADED_CSV_PATH", tmp_path / "loaded.csv")
     monkeypatch.setattr(pipeline, "load_cached_geo_payload", lambda: selected_payload)
+    monkeypatch.setattr(
+        pipeline,
+        "annotate_items_analyzable",
+        lambda items, cache_dir, check_limit, strict_validation=True: items,
+    )
 
     out = pipeline.run_geo_load_selection(["GSE2"])
 
@@ -107,7 +112,7 @@ def test_run_geo_pipeline_overfetches_for_analyzable(monkeypatch):
             items=payload["items"],
         )
 
-    def fake_annotate(items, cache_dir, check_limit):
+    def fake_annotate(items, cache_dir, check_limit, strict_validation=True):
         out = []
         for row in items:
             copy = dict(row)

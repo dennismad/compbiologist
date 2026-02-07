@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import app.geo as geo
 from app.geo import build_geo_insights, enrich_geo_items, filter_geo_items
 
 
@@ -86,3 +87,18 @@ def test_build_geo_insights_distributions():
     assert insights["sample_distribution"]["11-50"] == 1
     assert insights["sample_distribution"]["501-1000"] == 1
     assert insights["experiment_distribution"]["RNA-seq"] == 2
+
+
+def test_search_geo_datasets_returns_error_source_when_remote_fails(monkeypatch):
+    monkeypatch.setattr(geo, "get_cached_search", lambda **kwargs: None)
+    monkeypatch.setattr(
+        geo.requests,
+        "get",
+        lambda *args, **kwargs: (_ for _ in ()).throw(RuntimeError("network down")),
+    )
+
+    result = geo.search_geo_datasets(query="diabetes", retmax=5)
+
+    assert result.source == "geo_error"
+    assert result.total_found == 0
+    assert result.items == []

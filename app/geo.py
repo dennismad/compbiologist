@@ -12,7 +12,7 @@ from app.config import (
     GEO_DEFAULT_QUERY,
     GEO_ESEARCH_ENDPOINT,
     GEO_ESUMMARY_ENDPOINT,
-    GEO_SAMPLE_PATH,
+    GEO_NCBI_API_KEY,
 )
 from app.geo_cache import get_cached_search, set_cached_search
 
@@ -260,7 +260,7 @@ def search_geo_datasets(
         retmax=retmax,
         retstart=retstart,
     )
-    if cached is not None:
+    if cached is not None and str(cached.get("source", "")) == "geo":
         return GEOSearchResult(
             source=str(cached.get("source", "geo_cache")),
             query=str(cached.get("query", query)),
@@ -283,6 +283,8 @@ def search_geo_datasets(
         "retstart": max(0, int(retstart)),
         "sort": "relevance",
     }
+    if GEO_NCBI_API_KEY:
+        esearch_params["api_key"] = GEO_NCBI_API_KEY
 
     try:
         esearch_resp = requests.get(GEO_ESEARCH_ENDPOINT, params=esearch_params, timeout=20)
@@ -301,6 +303,8 @@ def search_geo_datasets(
             "id": ",".join(id_list),
             "retmode": "json",
         }
+        if GEO_NCBI_API_KEY:
+            esummary_params["api_key"] = GEO_NCBI_API_KEY
         esummary_resp = requests.get(GEO_ESUMMARY_ENDPOINT, params=esummary_params, timeout=20)
         esummary_resp.raise_for_status()
         esummary_data = esummary_resp.json()
@@ -329,29 +333,13 @@ def search_geo_datasets(
         )
         return GEOSearchResult(source="geo", query=query, total_found=total_found, items=items)
     except Exception:
-        sample = json.loads(GEO_SAMPLE_PATH.read_text(encoding="utf-8"))
-        items = enrich_geo_items(sample.get("items", []))
-        result = GEOSearchResult(
-            source="sample_fallback",
+        # Keep failures explicit instead of silently returning mismatched sample data.
+        return GEOSearchResult(
+            source="geo_error",
             query=query,
-            total_found=sample.get("total_found", len(items)),
-            items=items,
+            total_found=0,
+            items=[],
         )
-        set_cached_search(
-            query=query,
-            species_filter=species_filter,
-            experiment_filter=experiment_filter,
-            state_filter=state_filter,
-            retmax=retmax,
-            retstart=retstart,
-            payload={
-                "source": result.source,
-                "query": result.query,
-                "total_found": result.total_found,
-                "items": result.items,
-            },
-        )
-        return result
 
 
 def write_geo_artifacts(

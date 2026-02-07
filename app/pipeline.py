@@ -45,6 +45,10 @@ def _dedupe_geo_items(items: list[dict]) -> list[dict]:
     return out
 
 
+def _dataset_id(row: dict) -> str:
+    return str(row.get("accession") or row.get("uid") or "").strip()
+
+
 def ensure_data_dirs() -> None:
     RAW_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -108,7 +112,12 @@ def run_geo_pipeline(
 
         filtered_items = enrich_geo_items(page.items)
         check_limit = len(filtered_items) if only_analyzable else 40
-        annotated_page = annotate_items_analyzable(filtered_items, cache_dir=GEO_MATRIX_CACHE_DIR, check_limit=check_limit)
+        annotated_page = annotate_items_analyzable(
+            filtered_items,
+            cache_dir=GEO_MATRIX_CACHE_DIR,
+            check_limit=check_limit,
+            strict_validation=False,
+        )
         annotated_page = _dedupe_geo_items(annotated_page)
         accepted_before_analyzable += len(annotated_page)
 
@@ -153,6 +162,20 @@ def run_geo_pipeline(
 
 def run_geo_load_selection(selected_ids: list[str]) -> dict:
     source_payload = load_cached_geo_payload()
+    selected_set = {str(x).strip() for x in selected_ids if str(x).strip()}
+    source_items = list(source_payload.get("items", []))
+    selected_rows = [row for row in source_items if _dataset_id(row) in selected_set]
+
+    if selected_rows:
+        validated = annotate_items_analyzable(
+            selected_rows,
+            cache_dir=GEO_MATRIX_CACHE_DIR,
+            check_limit=len(selected_rows),
+            strict_validation=True,
+        )
+        validated_map = {_dataset_id(row): row for row in validated}
+        source_payload["items"] = [validated_map.get(_dataset_id(row), row) for row in source_items]
+
     return save_loaded_geo_selection(
         loaded_json_path=GEO_LOADED_JSON_PATH,
         loaded_csv_path=GEO_LOADED_CSV_PATH,
