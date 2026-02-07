@@ -108,13 +108,20 @@ def run_geo_load_selection(selected_ids: list[str]) -> dict:
     )
 
 
-def run_comparison_analysis(state_profile: str, padj_cutoff: float, log2fc_cutoff: float) -> dict:
+def run_comparison_analysis(
+    state_profile: str,
+    padj_cutoff: float,
+    log2fc_cutoff: float,
+    manual_choice: dict | None = None,
+) -> dict:
     loaded = load_cached_loaded_geo_payload()
     payload = run_state_comparison_analysis(
         state_profile=state_profile,
         loaded_items=loaded.get("items", []),
         padj_cutoff=padj_cutoff,
         log2fc_cutoff=log2fc_cutoff,
+        use_real_geo=True,
+        manual_choice=manual_choice,
     )
     save_analysis_outputs(ANALYSIS_RESULT_PATH, ANALYSIS_DGE_PATH, payload)
     return payload

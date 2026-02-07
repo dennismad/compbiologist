@@ -168,78 +168,155 @@
           {% if analysis.metadata.notes %}
             <p class="note">{{ analysis.metadata.notes|join(' ; ') }}</p>
           {% endif %}
+          {% if analysis.metadata.mode == "needs_group_selection" and analysis.group_choice %}
+            <h3>Manual Group Selection Required</h3>
+            <form action="{{ url_for('run_analysis_manual') }}" method="post" class="panel">
+              <input type="hidden" name="analysis_state" value="{{ analysis.metadata.state_profile }}" />
+              <input type="hidden" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff }}" />
+              <input type="hidden" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff }}" />
+              <input type="hidden" name="manual_gse" value="{{ analysis.group_choice.gse }}" />
 
-          <section class="cards">
-            <article class="card"><h2>Datasets</h2><p>{{ analysis.metadata.n_datasets }}</p></article>
-            <article class="card"><h2>Genes</h2><p>{{ analysis.metadata.n_genes }}</p></article>
-            <article class="card"><h2>Upregulated</h2><p>{{ analysis.metadata.n_up }}</p></article>
-            <article class="card"><h2>Downregulated</h2><p>{{ analysis.metadata.n_down }}</p></article>
-          </section>
+              <p class="note">Dataset: {{ analysis.group_choice.gse }} | Source: {{ analysis.group_choice.source }}</p>
 
-          <h3>Volcano Plot</h3>
-          <div id="volcano-plot" class="volcano"></div>
+              <div class="inline-form">
+                <label>
+                  Group A Name
+                  <input type="text" name="group_a_name" value="{{ analysis.group_choice.group_a_name }}" />
+                </label>
+                <label>
+                  Group B Name
+                  <input type="text" name="group_b_name" value="{{ analysis.group_choice.group_b_name }}" />
+                </label>
+              </div>
 
-          <div class="two-col">
-            <div>
-              <h3>Top Upregulated Genes</h3>
+              <div class="two-col">
+                <div>
+                  <h4>Group A Samples (select at least 2)</h4>
+                  <p class="note">Use Cmd/Ctrl + click to select multiple samples.</p>
+                  <select name="group_a_samples" multiple size="12" class="multi-select">
+                    {% for opt in analysis.group_choice.sample_options %}
+                      <option value="{{ opt.id }}" {% if opt.id in analysis.group_choice.suggested_group_a %}selected{% endif %}>{{ opt.id }} | {{ opt.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div>
+                  <h4>Group B Samples (select at least 2)</h4>
+                  <p class="note">Use Cmd/Ctrl + click to select multiple samples.</p>
+                  <select name="group_b_samples" multiple size="12" class="multi-select">
+                    {% for opt in analysis.group_choice.sample_options %}
+                      <option value="{{ opt.id }}" {% if opt.id in analysis.group_choice.suggested_group_b %}selected{% endif %}>{{ opt.id }} | {{ opt.label }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+              </div>
+
+              <h4>Sample Metadata</h4>
               <table>
-                <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                <thead>
+                  <tr>
+                    <th>Sample ID</th>
+                    <th>Suggested Group</th>
+                    <th>Annotation</th>
+                  </tr>
+                </thead>
                 <tbody>
-                  {% for row in analysis.top_up %}
-                    <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                  {% for opt in analysis.group_choice.sample_options %}
+                    <tr>
+                      <td>{{ opt.id }}</td>
+                      <td>
+                        {% if opt.id in analysis.group_choice.suggested_group_a %}
+                          {{ analysis.group_choice.group_a_name }}
+                        {% elif opt.id in analysis.group_choice.suggested_group_b %}
+                          {{ analysis.group_choice.group_b_name }}
+                        {% else %}
+                          Unassigned
+                        {% endif %}
+                      </td>
+                      <td class="sample-annotation">{{ opt.label }}</td>
+                    </tr>
                   {% endfor %}
-                  {% if not analysis.top_up %}
-                    <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
-                  {% endif %}
                 </tbody>
               </table>
-            </div>
-            <div>
-              <h3>Top Downregulated Genes</h3>
-              <table>
-                <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
-                <tbody>
-                  {% for row in analysis.top_down %}
-                    <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
-                  {% endfor %}
-                  {% if not analysis.top_down %}
-                    <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
-                  {% endif %}
-                </tbody>
-              </table>
-            </div>
-          </div>
 
-          <div class="two-col">
-            <div>
-              <h3>Enrichment (Up)</h3>
-              <table>
-                <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
-                <tbody>
-                  {% for row in analysis.enrichment_up %}
-                    <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
-                  {% endfor %}
-                  {% if not analysis.enrichment_up %}
-                    <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
-                  {% endif %}
-                </tbody>
-              </table>
+              <div class="table-action">
+                <button type="submit">Run Real Analysis With Selected Groups</button>
+              </div>
+            </form>
+          {% elif analysis.metadata.n_genes > 0 %}
+            <section class="cards">
+              <article class="card"><h2>Datasets</h2><p>{{ analysis.metadata.n_datasets }}</p></article>
+              <article class="card"><h2>Genes</h2><p>{{ analysis.metadata.n_genes }}</p></article>
+              <article class="card"><h2>Upregulated</h2><p>{{ analysis.metadata.n_up }}</p></article>
+              <article class="card"><h2>Downregulated</h2><p>{{ analysis.metadata.n_down }}</p></article>
+            </section>
+
+            <h3>Volcano Plot</h3>
+            <div id="volcano-plot" class="volcano"></div>
+
+            <div class="two-col">
+              <div>
+                <h3>Top Upregulated Genes</h3>
+                <table>
+                  <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                  <tbody>
+                    {% for row in analysis.top_up %}
+                      <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                    {% endfor %}
+                    {% if not analysis.top_up %}
+                      <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3>Top Downregulated Genes</h3>
+                <table>
+                  <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                  <tbody>
+                    {% for row in analysis.top_down %}
+                      <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                    {% endfor %}
+                    {% if not analysis.top_down %}
+                      <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div>
-              <h3>Enrichment (Down)</h3>
-              <table>
-                <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
-                <tbody>
-                  {% for row in analysis.enrichment_down %}
-                    <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
-                  {% endfor %}
-                  {% if not analysis.enrichment_down %}
-                    <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
-                  {% endif %}
-                </tbody>
-              </table>
+
+            <div class="two-col">
+              <div>
+                <h3>Enrichment (Up)</h3>
+                <table>
+                  <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
+                  <tbody>
+                    {% for row in analysis.enrichment_up %}
+                      <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                    {% endfor %}
+                    {% if not analysis.enrichment_up %}
+                      <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
+              <div>
+                <h3>Enrichment (Down)</h3>
+                <table>
+                  <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
+                  <tbody>
+                    {% for row in analysis.enrichment_down %}
+                      <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                    {% endfor %}
+                    {% if not analysis.enrichment_down %}
+                      <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
+                    {% endif %}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          {% else %}
+            <p class="note">No real-analysis results yet.</p>
+          {% endif %}
         {% else %}
           <p class="note">Run analysis after loading datasets to generate volcano and enrichment outputs.</p>
         {% endif %}
@@ -249,7 +326,7 @@
         <p>Protein refresh metadata: {{ protein_metadata.data_source }} | {{ protein_metadata.last_updated_utc }}</p>
       </footer>
     </main>
-    {% if analysis %}
+    {% if analysis and analysis.metadata.n_genes > 0 %}
       <script>
         (() => {
           const points = {{ analysis.volcano.points | tojson }};

@@ -30,8 +30,8 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
   - top up/down genes
   - pathway enrichment (up and down)
   - real GEO matrix differential expression (when a selected GSE has usable series-matrix + sample-group labels)
-  - automatic fallback to prototype mode if real GEO matrix processing is not possible
-  - current implementation analyzes the first loaded GSE that yields valid groups; multi-study meta-analysis is a next step
+  - if automatic grouping fails, the UI now requires manual sample-group selection before real DE can run
+  - current implementation analyzes one loaded GSE at a time (manual group selection supported when auto-detection fails)
 
 ## Pipeline only (CLI)
 

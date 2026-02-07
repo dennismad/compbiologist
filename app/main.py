@@ -122,6 +122,41 @@ def create_app() -> Flask:
             state_profile=state_profile,
             padj_cutoff=padj_cutoff,
             log2fc_cutoff=log2fc_cutoff,
+            manual_choice=None,
+        )
+        return redirect(url_for("index"))
+
+    @app.post("/analysis/run-manual")
+    def run_analysis_manual():
+        state_profile = request.form.get("analysis_state", "Disease vs Healthy").strip() or "Disease vs Healthy"
+        padj_raw = request.form.get("padj_cutoff", "0.05").strip()
+        lfc_raw = request.form.get("log2fc_cutoff", "1.0").strip()
+
+        try:
+            padj_cutoff = float(padj_raw)
+        except ValueError:
+            padj_cutoff = 0.05
+        try:
+            log2fc_cutoff = float(lfc_raw)
+        except ValueError:
+            log2fc_cutoff = 1.0
+
+        padj_cutoff = min(max(padj_cutoff, 1e-6), 1.0)
+        log2fc_cutoff = min(max(log2fc_cutoff, 0.1), 5.0)
+
+        manual_choice = {
+            "gse": request.form.get("manual_gse", "").strip(),
+            "group_a_name": request.form.get("group_a_name", "Group A").strip() or "Group A",
+            "group_b_name": request.form.get("group_b_name", "Group B").strip() or "Group B",
+            "group_a_samples": request.form.getlist("group_a_samples"),
+            "group_b_samples": request.form.getlist("group_b_samples"),
+        }
+
+        run_comparison_analysis(
+            state_profile=state_profile,
+            padj_cutoff=padj_cutoff,
+            log2fc_cutoff=log2fc_cutoff,
+            manual_choice=manual_choice,
         )
         return redirect(url_for("index"))
 
