@@ -4,6 +4,7 @@ import json
 import re
 import sqlite3
 import time
+from functools import lru_cache
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -39,6 +40,14 @@ STATE_FILTER_OPTIONS = [
     "Treated vs Untreated",
 ]
 
+DEFAULT_SPECIES_OPTIONS = [
+    "Homo sapiens",
+    "Mus musculus",
+    "Rattus norvegicus",
+    "Danio rerio",
+    "Drosophila melanogaster",
+]
+
 
 @dataclass
 class GEOSearchResult:
@@ -59,6 +68,40 @@ def _build_pubmed_link(pubmed_id: str) -> str:
     if not pubmed_id:
         return ""
     return f"https://pubmed.ncbi.nlm.nih.gov/{pubmed_id}/"
+
+
+@lru_cache(maxsize=8)
+def _common_species_from_sqlite(db_path: str, limit: int) -> tuple[str, ...]:
+    with sqlite3.connect(db_path) as conn:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT
+              lower(trim(organism_ch1)) AS organism_key,
+              MIN(trim(organism_ch1)) AS organism,
+              COUNT(*) AS n
+            FROM gsm
+            WHERE organism_ch1 IS NOT NULL
+              AND trim(organism_ch1) <> ''
+            GROUP BY organism_key
+            ORDER BY n DESC, organism ASC
+            LIMIT ?
+            """,
+            [max(1, int(limit))],
+        ).fetchall()
+    out = tuple(str(row["organism"] or "").strip() for row in rows if str(row["organism"] or "").strip())
+    return out
+
+
+def get_common_species_options(limit: int = 5) -> list[str]:
+    if GEO_SQLITE_PATH.exists():
+        try:
+            options = list(_common_species_from_sqlite(str(GEO_SQLITE_PATH), int(limit)))
+            if options:
+                return options[: max(1, int(limit))]
+        except Exception:
+            pass
+    return DEFAULT_SPECIES_OPTIONS[: max(1, int(limit))]
 
 
 def _infer_experiment_type(title: str, summary: str, gds_type: str) -> str:

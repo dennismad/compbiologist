@@ -44,7 +44,9 @@
             <h2>GEO Search</h2>
             <p class="step-sub">Find candidate studies before loading them for analysis.</p>
           </div>
+          <button type="button" class="toggle-step" data-target="geo-search-body" aria-expanded="true">Hide details</button>
         </div>
+        <div id="geo-search-body" class="step-body">
         <form action="{{ url_for('geo_search') }}" method="post" class="inline-form" data-preserve-scroll="true">
           <label>
             Query
@@ -52,7 +54,17 @@
           </label>
           <label>
             Species
-            <input type="text" name="species" placeholder="e.g. Homo sapiens" value="{{ geo_search_summary.species_filter }}" />
+            <select name="species_choice" id="species-choice">
+              <option value="" {% if not selected_species_option %}selected{% endif %}>All species</option>
+              {% for species_name in species_options %}
+                <option value="{{ species_name }}" {% if selected_species_option == species_name %}selected{% endif %}>{{ species_name }}</option>
+              {% endfor %}
+              <option value="__OTHER__" {% if selected_species_option == "__OTHER__" %}selected{% endif %}>Other</option>
+            </select>
+          </label>
+          <label id="species-other-wrap" class="{% if selected_species_option != '__OTHER__' %}is-hidden{% endif %}">
+            Other species
+            <input type="text" name="species_other" id="species-other" placeholder="e.g. Sus scrofa" value="{{ other_species_value }}" />
           </label>
           <label>
             Experiment Type
@@ -147,6 +159,7 @@
         {% else %}
           <p class="note">No GEO search results yet. Run a GEO search first.</p>
         {% endif %}
+        </div>
       </section>
 
       <section class="panel step-panel" id="loaded-section">
@@ -156,7 +169,9 @@
             <h2>Loaded Datasets</h2>
             <p class="step-sub">Review the selected studies before differential expression analysis.</p>
           </div>
+          <button type="button" class="toggle-step" data-target="loaded-body" aria-expanded="true">Hide details</button>
         </div>
+        <div id="loaded-body" class="step-body">
         <p class="note">
           Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
           State filter: {{ geo_loaded_summary.state_filter }}
@@ -197,6 +212,7 @@
         {% else %}
           <p class="note">Select rows from GEO search and click "Run Step 2 Load Selected".</p>
         {% endif %}
+        </div>
       </section>
 
       <section class="panel step-panel" id="analysis-section">
@@ -206,7 +222,9 @@
             <h2>State Comparison Analysis</h2>
             <p class="step-sub">Configure thresholds and run differential expression with enrichment.</p>
           </div>
+          <button type="button" class="toggle-step" data-target="analysis-body" aria-expanded="true">Hide details</button>
         </div>
+        <div id="analysis-body" class="step-body">
         <form action="{{ url_for('run_analysis') }}" method="post" class="inline-form" data-preserve-scroll="true">
           <label>
             Comparison State
@@ -449,6 +467,7 @@
         {% else %}
           <p class="note">Run analysis after loading datasets to generate volcano and enrichment outputs.</p>
         {% endif %}
+        </div>
       </section>
 
       <footer>
@@ -472,6 +491,48 @@
             window.sessionStorage.setItem(key, String(window.scrollY));
           });
         });
+
+        const collapseKeyPrefix = "stepCollapsed:";
+        document.querySelectorAll(".toggle-step").forEach((btn) => {
+          const targetId = btn.getAttribute("data-target");
+          if (!targetId) return;
+          const target = document.getElementById(targetId);
+          if (!target) return;
+
+          const applyCollapsed = (collapsed) => {
+            target.classList.toggle("is-collapsed", collapsed);
+            btn.textContent = collapsed ? "Show details" : "Hide details";
+            btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
+          };
+
+          const saved = window.localStorage.getItem(collapseKeyPrefix + targetId) === "1";
+          applyCollapsed(saved);
+
+          btn.addEventListener("click", () => {
+            const nextCollapsed = !target.classList.contains("is-collapsed");
+            applyCollapsed(nextCollapsed);
+            if (nextCollapsed) {
+              window.localStorage.setItem(collapseKeyPrefix + targetId, "1");
+            } else {
+              window.localStorage.removeItem(collapseKeyPrefix + targetId);
+            }
+          });
+        });
+
+        const speciesChoice = document.getElementById("species-choice");
+        const speciesOtherWrap = document.getElementById("species-other-wrap");
+        const speciesOtherInput = document.getElementById("species-other");
+        if (speciesChoice && speciesOtherWrap) {
+          const syncSpeciesOther = () => {
+            const isOther = speciesChoice.value === "__OTHER__";
+            speciesOtherWrap.classList.toggle("is-hidden", !isOther);
+            if (speciesOtherInput) {
+              speciesOtherInput.disabled = !isOther;
+            }
+          };
+          syncSpeciesOther();
+          speciesChoice.addEventListener("change", syncSpeciesOther);
+        }
       })();
     </script>
     {% if analysis and analysis.metadata.n_genes > 0 %}

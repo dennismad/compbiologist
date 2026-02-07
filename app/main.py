@@ -7,7 +7,7 @@ from flask import Flask, redirect, render_template, request, url_for
 
 from app.analysis import DEFAULT_ENRICHMENT_MODE, ENRICHMENT_MODE_OPTIONS
 from app.config import GEO_DEFAULT_FETCH_SIZE, GEO_DEFAULT_QUERY
-from app.geo import EXPERIMENT_TYPE_OPTIONS, STATE_FILTER_OPTIONS
+from app.geo import EXPERIMENT_TYPE_OPTIONS, STATE_FILTER_OPTIONS, get_common_species_options
 from app.pipeline import (
     load_cached_analysis_payload,
     load_cached_geo_payload,
@@ -37,6 +37,10 @@ def create_app() -> Flask:
         geo_search_payload = load_cached_geo_payload()
         geo_loaded_payload = load_cached_loaded_geo_payload()
         analysis_payload = load_cached_analysis_payload()
+        species_options = get_common_species_options(limit=5)
+        current_species_filter = str(geo_search_payload.get("species_filter", "")).strip()
+        selected_species_option = current_species_filter if current_species_filter in species_options else ("__OTHER__" if current_species_filter else "")
+        other_species_value = current_species_filter if selected_species_option == "__OTHER__" else ""
 
         return render_template(
             "index.html",
@@ -65,6 +69,9 @@ def create_app() -> Flask:
             geo_loaded_items=geo_loaded_payload.get("items", [])[:80],
             geo_default_query=GEO_DEFAULT_QUERY,
             geo_default_fetch_size=GEO_DEFAULT_FETCH_SIZE,
+            species_options=species_options,
+            selected_species_option=selected_species_option,
+            other_species_value=other_species_value,
             experiment_type_options=EXPERIMENT_TYPE_OPTIONS,
             state_filter_options=STATE_FILTER_OPTIONS,
             enrichment_mode_options=ENRICHMENT_MODE_OPTIONS,
@@ -80,7 +87,15 @@ def create_app() -> Flask:
     @app.post("/geo/search")
     def geo_search():
         query = request.form.get("query", "").strip() or GEO_DEFAULT_QUERY
-        species_filter = request.form.get("species", "").strip()
+        species_choice = request.form.get("species_choice", "").strip()
+        species_other = request.form.get("species_other", "").strip()
+        legacy_species = request.form.get("species", "").strip()
+        if species_choice == "__OTHER__":
+            species_filter = species_other
+        elif species_choice:
+            species_filter = species_choice
+        else:
+            species_filter = legacy_species
         experiment_filter = request.form.get("experiment_type", "All").strip() or "All"
         state_filter = request.form.get("state_filter", "All").strip() or "All"
         only_analyzable = request.form.get("only_analyzable", "") == "on"

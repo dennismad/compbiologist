@@ -205,3 +205,40 @@ def test_sqlite_state_filter_returns_only_matching_inferred_state(monkeypatch, t
     assert result.source == "geo_sqlite"
     assert len(result.items) >= 1
     assert all(item.get("state_profile") == "Disease vs Healthy" for item in result.items)
+
+
+def test_get_common_species_options_from_sqlite(monkeypatch, tmp_path):
+    db_path = tmp_path / "GEOmetadb.sqlite"
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE gsm (ID REAL, title TEXT, gsm TEXT, organism_ch1 TEXT);
+            INSERT INTO gsm (ID, title, gsm, organism_ch1) VALUES
+              (1, 'a', 'GSM1', 'Homo sapiens'),
+              (2, 'b', 'GSM2', 'Homo sapiens'),
+              (3, 'c', 'GSM3', 'Mus musculus'),
+              (4, 'd', 'GSM4', 'Rattus norvegicus'),
+              (5, 'e', 'GSM5', 'Rattus norvegicus'),
+              (6, 'f', 'GSM6', 'Rattus norvegicus');
+            """
+        )
+        conn.commit()
+
+    monkeypatch.setattr(geo, "GEO_SQLITE_PATH", db_path)
+    geo._common_species_from_sqlite.cache_clear()
+
+    options = geo.get_common_species_options(limit=5)
+
+    assert options[0] == "Rattus norvegicus"
+    assert options[1] == "Homo sapiens"
+    assert "Mus musculus" in options
+
+
+def test_get_common_species_options_fallback_defaults(monkeypatch):
+    monkeypatch.setattr(geo, "GEO_SQLITE_PATH", Path("/tmp/nonexistent-geometadb.sqlite"))
+    geo._common_species_from_sqlite.cache_clear()
+
+    options = geo.get_common_species_options(limit=5)
+
+    assert options[0] == "Homo sapiens"
+    assert len(options) == 5
