@@ -57,8 +57,8 @@
           Returned: {{ geo_search_summary.returned }}{% if geo_search_summary.only_analyzable %} (from {{ geo_search_summary.returned_before_analyzable_filter }} prefiltered){% endif %} |
           Total found: {{ geo_search_summary.total_found }}
         </p>
-        {% if geo_search_summary.source == "geo_error" %}
-          <p class="note">GEO API request failed. Check network/API limits and rerun search.</p>
+        {% if geo_search_summary.source.endswith("_error") %}
+          <p class="note">GEO metadata search failed. Check local SQLite/API setup and rerun search.</p>
           {% if geo_search_summary.error %}
             <p class="note">Error detail: {{ geo_search_summary.error }}</p>
           {% endif %}

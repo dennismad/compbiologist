@@ -1,6 +1,7 @@
 {
   "query": "diabetes",
   "source": "geo_error",
+  "error": "",
   "total_found": 0,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",

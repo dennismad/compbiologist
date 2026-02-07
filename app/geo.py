@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import re
+import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -15,6 +17,7 @@ from app.config import (
     GEO_ESUMMARY_ENDPOINT,
     GEO_NCBI_API_KEY,
     GEO_NCBI_EMAIL,
+    GEO_SQLITE_PATH,
 )
 from app.geo_cache import get_cached_search, set_cached_search
 
@@ -170,6 +173,131 @@ def _parse_geo_summary_payload(payload: dict, id_list: list[str]) -> list[dict]:
     return items
 
 
+def _build_sqlite_where_clause(query: str, species_filter: str) -> tuple[str, list[str]]:
+    text = (query or GEO_DEFAULT_QUERY).strip().lower()
+    tokens = [tok for tok in re.split(r"\s+", text) if tok]
+
+    clauses: list[str] = []
+    params: list[str] = []
+    for token in tokens:
+        clauses.append("lower(g.title || ' ' || ifnull(g.summary,'') || ' ' || ifnull(g.type,'')) LIKE ?")
+        params.append(f"%{token}%")
+
+    species = species_filter.strip().lower()
+    if species:
+        clauses.append(
+            """EXISTS (
+                SELECT 1
+                FROM gse_gsm gg
+                JOIN gsm s ON gg.gsm = s.gsm
+                WHERE gg.gse = g.gse
+                  AND lower(ifnull(s.organism_ch1,'')) LIKE ?
+            )"""
+        )
+        params.append(f"%{species}%")
+
+    where_sql = " AND ".join(clauses) if clauses else "1=1"
+    return where_sql, params
+
+
+def _search_geo_datasets_sqlite(
+    query: str,
+    retmax: int,
+    retstart: int,
+    species_filter: str,
+    experiment_filter: str,
+    state_filter: str,
+) -> GEOSearchResult:
+    requested_retmax = max(1, int(retmax))
+    fetch_retmax = requested_retmax
+    if species_filter.strip() or experiment_filter.strip() not in ("", "All"):
+        fetch_retmax = min(1000, max(requested_retmax * 5, requested_retmax))
+
+    where_sql, where_params = _build_sqlite_where_clause(query=query, species_filter=species_filter)
+    offset = max(0, int(retstart))
+
+    with sqlite3.connect(str(GEO_SQLITE_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        total_found = int(
+            conn.execute(
+                f"SELECT COUNT(*) AS n FROM gse g WHERE {where_sql}",
+                where_params,
+            ).fetchone()["n"]
+        )
+
+        rows = conn.execute(
+            f"""
+            SELECT
+              g.gse AS accession,
+              g.title AS title,
+              g.summary AS summary,
+              g.pubmed_id AS pubmed_id,
+              g.last_update_date AS pdat,
+              g.type AS gds_type,
+              COALESCE((
+                SELECT group_concat(DISTINCT s.organism_ch1)
+                FROM gse_gsm gg
+                JOIN gsm s ON gg.gsm = s.gsm
+                WHERE gg.gse = g.gse
+                  AND s.organism_ch1 IS NOT NULL
+                  AND s.organism_ch1 <> ''
+              ), '') AS organism,
+              COALESCE((
+                SELECT COUNT(DISTINCT gg.gsm)
+                FROM gse_gsm gg
+                WHERE gg.gse = g.gse
+              ), 0) AS n_samples
+            FROM gse g
+            WHERE {where_sql}
+            ORDER BY g.last_update_date DESC, g.gse DESC
+            LIMIT ? OFFSET ?
+            """,
+            [*where_params, fetch_retmax, offset],
+        ).fetchall()
+
+    items: list[dict] = []
+    for row in rows:
+        accession = str(row["accession"] or "").strip()
+        title = str(row["title"] or "")
+        summary = str(row["summary"] or "")
+        gds_type = str(row["gds_type"] or "")
+        organism = str(row["organism"] or "").replace(",", " | ")
+        pubmed_id = str(row["pubmed_id"] or "").strip()
+        pdat = str(row["pdat"] or "").strip()
+        n_samples = int(row["n_samples"] or 0)
+
+        items.append(
+            {
+                "uid": accession,
+                "accession": accession,
+                "title": title,
+                "summary": summary,
+                "organism": organism,
+                "n_samples": n_samples,
+                "gse": accession,
+                "pubmed_id": pubmed_id,
+                "pdat": pdat,
+                "gds_type": gds_type,
+                "experiment_type": _infer_experiment_type(title, summary, gds_type),
+                "state_profile": _infer_state_profile(title, summary),
+            }
+        )
+
+    items = filter_geo_items(
+        items,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+    )
+    items = items[:requested_retmax]
+    return GEOSearchResult(
+        source="geo_sqlite",
+        query=query,
+        total_found=total_found,
+        items=items,
+    )
+
+
 def enrich_geo_items(items: list[dict]) -> list[dict]:
     enriched: list[dict] = []
     for row in items:
@@ -269,37 +397,18 @@ def build_geo_insights(items: list[dict]) -> dict:
     }
 
 
-def search_geo_datasets(
-    query: str = GEO_DEFAULT_QUERY,
-    retmax: int = GEO_DEFAULT_FETCH_SIZE,
-    retstart: int = 0,
-    species_filter: str = "",
-    experiment_filter: str = "All",
-    state_filter: str = "All",
+def _search_geo_datasets_eutils(
+    query: str,
+    retmax: int,
+    retstart: int,
+    species_filter: str,
+    experiment_filter: str,
+    state_filter: str,
 ) -> GEOSearchResult:
-    """Search GEO datasets (GDS) via NCBI E-utilities and return normalized records."""
-    cached = get_cached_search(
-        query=query,
-        species_filter=species_filter,
-        experiment_filter=experiment_filter,
-        state_filter=state_filter,
-        retmax=retmax,
-        retstart=retstart,
-    )
-    if cached is not None and str(cached.get("source", "")) == "geo":
-        return GEOSearchResult(
-            source=str(cached.get("source", "geo_cache")),
-            query=str(cached.get("query", query)),
-            total_found=int(cached.get("total_found", 0)),
-            items=list(cached.get("items", [])),
-            error=str(cached.get("error", "")),
-        )
-
     geo_term = _build_geo_term(query, species_filter=species_filter, experiment_filter=experiment_filter)
     requested_retmax = max(1, retmax)
     fetch_retmax = requested_retmax
     if species_filter.strip() or experiment_filter.strip() not in ("", "All"):
-        # Fetch a broader window before local filtering so filtered results are less likely to be empty.
         fetch_retmax = min(1000, max(requested_retmax * 5, requested_retmax))
 
     esearch_params = {
@@ -312,32 +421,81 @@ def search_geo_datasets(
     }
     esearch_params.update(_geo_common_params())
 
-    try:
-        esearch_data = _get_json_with_retries(GEO_ESEARCH_ENDPOINT, esearch_params, timeout=25, attempts=3)
+    esearch_data = _get_json_with_retries(GEO_ESEARCH_ENDPOINT, esearch_params, timeout=25, attempts=3)
 
-        search_result = esearch_data.get("esearchresult", {})
-        id_list = search_result.get("idlist", [])
-        total_found = int(search_result.get("count", 0))
+    search_result = esearch_data.get("esearchresult", {})
+    id_list = search_result.get("idlist", [])
+    total_found = int(search_result.get("count", 0))
 
-        if not id_list:
-            return GEOSearchResult(source="geo", query=query, total_found=total_found, items=[])
+    if not id_list:
+        return GEOSearchResult(source="geo", query=query, total_found=total_found, items=[])
 
-        esummary_params = {
-            "db": "gds",
-            "id": ",".join(id_list),
-            "retmode": "json",
-        }
-        esummary_params.update(_geo_common_params())
-        esummary_data = _get_json_with_retries(GEO_ESUMMARY_ENDPOINT, esummary_params, timeout=25, attempts=3)
+    esummary_params = {
+        "db": "gds",
+        "id": ",".join(id_list),
+        "retmode": "json",
+    }
+    esummary_params.update(_geo_common_params())
+    esummary_data = _get_json_with_retries(GEO_ESUMMARY_ENDPOINT, esummary_params, timeout=25, attempts=3)
 
-        items = _parse_geo_summary_payload(esummary_data, id_list)
-        items = filter_geo_items(
-            items,
-            species_filter=species_filter,
-            experiment_filter=experiment_filter,
-            state_filter=state_filter,
+    items = _parse_geo_summary_payload(esummary_data, id_list)
+    items = filter_geo_items(
+        items,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+    )
+    items = items[:requested_retmax]
+    return GEOSearchResult(source="geo", query=query, total_found=total_found, items=items)
+
+
+def search_geo_datasets(
+    query: str = GEO_DEFAULT_QUERY,
+    retmax: int = GEO_DEFAULT_FETCH_SIZE,
+    retstart: int = 0,
+    species_filter: str = "",
+    experiment_filter: str = "All",
+    state_filter: str = "All",
+) -> GEOSearchResult:
+    """Search GEO metadata from local GEOmetadb SQLite when available, else NCBI E-utilities."""
+    backend = "geo_sqlite" if GEO_SQLITE_PATH.exists() else "geo"
+
+    cached = get_cached_search(
+        query=query,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+        retmax=retmax,
+        retstart=retstart,
+    )
+    if cached is not None and str(cached.get("source", "")) == backend:
+        return GEOSearchResult(
+            source=str(cached.get("source", backend)),
+            query=str(cached.get("query", query)),
+            total_found=int(cached.get("total_found", 0)),
+            items=list(cached.get("items", [])),
+            error=str(cached.get("error", "")),
         )
-        items = items[:requested_retmax]
+
+    try:
+        if backend == "geo_sqlite":
+            result = _search_geo_datasets_sqlite(
+                query=query,
+                retmax=retmax,
+                retstart=retstart,
+                species_filter=species_filter,
+                experiment_filter=experiment_filter,
+                state_filter=state_filter,
+            )
+        else:
+            result = _search_geo_datasets_eutils(
+                query=query,
+                retmax=retmax,
+                retstart=retstart,
+                species_filter=species_filter,
+                experiment_filter=experiment_filter,
+                state_filter=state_filter,
+            )
         set_cached_search(
             query=query,
             species_filter=species_filter,
@@ -346,18 +504,17 @@ def search_geo_datasets(
             retmax=retmax,
             retstart=retstart,
             payload={
-                "source": "geo",
-                "query": query,
-                "total_found": total_found,
-                "items": items,
+                "source": result.source,
+                "query": result.query,
+                "total_found": result.total_found,
+                "items": result.items,
                 "error": "",
             },
         )
-        return GEOSearchResult(source="geo", query=query, total_found=total_found, items=items)
+        return result
     except Exception as exc:
-        # Keep failures explicit instead of silently returning mismatched sample data.
         return GEOSearchResult(
-            source="geo_error",
+            source=f"{backend}_error",
             query=query,
             total_found=0,
             items=[],

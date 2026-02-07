@@ -15,6 +15,7 @@ GEO_LOADED_JSON_PATH = DATA_DIR / "processed" / "geo_loaded.json"
 GEO_LOADED_CSV_PATH = DATA_DIR / "processed" / "geo_loaded.csv"
 GEO_MATRIX_CACHE_DIR = DATA_DIR / "raw" / "geo_matrix"
 GEO_CACHE_DB_PATH = DATA_DIR / "processed" / "geo_cache.json"
+GEO_SQLITE_PATH = BASE_DIR / "GEOmetadb.sqlite"
 GEO_SAMPLE_PATH = BASE_DIR / "app" / "sample_data" / "geo_sample.json"
 
 ANALYSIS_RESULT_PATH = DATA_DIR / "processed" / "analysis_result.json"

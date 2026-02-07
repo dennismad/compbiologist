@@ -2,7 +2,7 @@
 
 Minimal starter for a virtual computational biologist with:
 - Public data ingestion (UniProt API)
-- Public GEO dataset search (NCBI E-utilities)
+- Local GEO metadata search (GEOmetadb SQLite)
 - Local data processing (pandas)
 - Web UI for exploration (Flask)
 
@@ -12,6 +12,7 @@ Minimal starter for a virtual computational biologist with:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
+# Place GEOmetadb.sqlite at project root for local metadata search.
 # Optional but recommended for faster/higher-rate NCBI calls:
 export NCBI_API_KEY="your_ncbi_api_key"
 export NCBI_EMAIL="your_email@example.com"
@@ -71,6 +72,6 @@ make run
 
 ## Notes
 
-- Primary public sources: UniProt REST API and NCBI E-utilities (GEO).
+- Primary public sources: UniProt REST API and GEOmetadb SQLite (metadata), plus NCBI GEO FTP for matrix files.
 - GEO search responses and analyzability checks are cached locally in `data/processed/geo_cache.json`.
-- If GEO API requests fail, the UI now shows `Source: geo_error` instead of returning unrelated sample datasets.
+- If local SQLite metadata search fails, the UI shows `Source: geo_sqlite_error`.

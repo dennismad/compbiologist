@@ -1,6 +1,7 @@
 {
   "query": "diabetes",
   "source": "geo_error",
+  "error": "",
   "returned": 0,
   "total_found": 0,
   "species_filter": "Homo sapiens",

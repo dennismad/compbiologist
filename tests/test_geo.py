@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import sqlite3
+from pathlib import Path
+
 import app.geo as geo
 from app.geo import build_geo_insights, enrich_geo_items, filter_geo_items
 
@@ -90,6 +93,7 @@ def test_build_geo_insights_distributions():
 
 
 def test_search_geo_datasets_returns_error_source_when_remote_fails(monkeypatch):
+    monkeypatch.setattr(geo, "GEO_SQLITE_PATH", Path("/tmp/nonexistent-geometadb.sqlite"))
     monkeypatch.setattr(geo, "get_cached_search", lambda **kwargs: None)
     monkeypatch.setattr(
         geo.requests,
@@ -102,3 +106,52 @@ def test_search_geo_datasets_returns_error_source_when_remote_fails(monkeypatch)
     assert result.source == "geo_error"
     assert result.total_found == 0
     assert result.items == []
+
+
+def test_search_geo_datasets_uses_local_sqlite(monkeypatch, tmp_path):
+    db_path = tmp_path / "GEOmetadb.sqlite"
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE gse (
+              ID REAL,
+              title TEXT,
+              gse TEXT,
+              status TEXT,
+              submission_date TEXT,
+              last_update_date TEXT,
+              pubmed_id INTEGER,
+              summary TEXT,
+              type TEXT
+            );
+            CREATE TABLE gse_gsm (gse TEXT, gsm TEXT);
+            CREATE TABLE gsm (ID REAL, title TEXT, gsm TEXT, organism_ch1 TEXT);
+            INSERT INTO gse (ID, title, gse, last_update_date, pubmed_id, summary, type)
+              VALUES (1, 'Diabetes treated cohort', 'GSEX1', '2024-01-01', 12345, 'treated and untreated study', 'Expression profiling by high throughput sequencing');
+            INSERT INTO gse (ID, title, gse, last_update_date, pubmed_id, summary, type)
+              VALUES (2, 'Unrelated cancer cohort', 'GSEX2', '2024-01-02', 0, 'tumor study', 'Expression profiling by array');
+            INSERT INTO gse_gsm (gse, gsm) VALUES ('GSEX1', 'GSM1'), ('GSEX1', 'GSM2'), ('GSEX1', 'GSM3'), ('GSEX1', 'GSM4');
+            INSERT INTO gsm (ID, title, gsm, organism_ch1) VALUES
+              (1, 's1', 'GSM1', 'Homo sapiens'),
+              (2, 's2', 'GSM2', 'Homo sapiens'),
+              (3, 's3', 'GSM3', 'Homo sapiens'),
+              (4, 's4', 'GSM4', 'Homo sapiens');
+            """
+        )
+        conn.commit()
+
+    monkeypatch.setattr(geo, "GEO_SQLITE_PATH", db_path)
+    monkeypatch.setattr(geo, "get_cached_search", lambda **kwargs: None)
+
+    result = geo.search_geo_datasets(
+        query="diabetes",
+        retmax=10,
+        species_filter="Homo sapiens",
+        experiment_filter="RNA-seq",
+        state_filter="Treated vs Untreated",
+    )
+
+    assert result.source == "geo_sqlite"
+    assert result.total_found == 1
+    assert len(result.items) == 1
+    assert result.items[0]["accession"] == "GSEX1"
