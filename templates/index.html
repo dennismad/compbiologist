@@ -9,13 +9,42 @@
   </head>
   <body>
     <main class="container">
+      {% set has_search = geo_search_items|length > 0 %}
+      {% set has_loaded = geo_loaded_summary.returned > 0 %}
+      {% set has_analysis = analysis and analysis.metadata.n_genes > 0 %}
       <header>
-        <h1>Virtual Computational Biologist</h1>
-        <p>State comparison workflow with GEO search, dataset selection, enrichment, and volcano visualization.</p>
+        <div>
+          <h1>Virtual Computational Biologist</h1>
+          <p>Run the workflow in order: search GEO, load datasets, then run comparison analysis.</p>
+        </div>
       </header>
 
-      <section class="panel" id="geo-search-section">
-        <h2>1) GEO Search</h2>
+      <section class="workflow-rail">
+        <article class="workflow-step {% if has_search %}is-complete{% endif %}">
+          <p class="workflow-kicker">Step 1</p>
+          <h3>Search GEO</h3>
+          <p>{% if has_search %}Datasets found{% else %}Choose filters and run search{% endif %}</p>
+        </article>
+        <article class="workflow-step {% if has_loaded %}is-complete{% endif %}">
+          <p class="workflow-kicker">Step 2</p>
+          <h3>Load Datasets</h3>
+          <p>{% if has_loaded %}{{ geo_loaded_summary.returned }} loaded{% else %}Select rows and load{% endif %}</p>
+        </article>
+        <article class="workflow-step {% if has_analysis %}is-complete{% endif %}">
+          <p class="workflow-kicker">Step 3</p>
+          <h3>Run Analysis</h3>
+          <p>{% if has_analysis %}Results ready{% else %}Configure and run comparison{% endif %}</p>
+        </article>
+      </section>
+
+      <section class="panel step-panel" id="geo-search-section">
+        <div class="step-head">
+          <span class="step-index">1</span>
+          <div>
+            <h2>GEO Search</h2>
+            <p class="step-sub">Find candidate studies before loading them for analysis.</p>
+          </div>
+        </div>
         <form action="{{ url_for('geo_search') }}" method="post" class="inline-form" data-preserve-scroll="true">
           <label>
             Query
@@ -49,7 +78,7 @@
             <input type="checkbox" name="only_analyzable" {% if geo_search_summary.only_analyzable %}checked{% endif %} />
             Only analyzable datasets
           </label>
-          <button type="submit">Search GEO</button>
+          <button type="submit" class="run-btn">Run Step 1 Search</button>
         </form>
 
         <p class="note">
@@ -67,7 +96,7 @@
         {% if geo_search_items %}
           <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
             <div class="table-action">
-              <button type="submit">Load Selected Datasets</button>
+              <button type="submit" class="run-btn">Run Step 2 Load Selected</button>
             </div>
             <table>
               <thead>
@@ -120,8 +149,14 @@
         {% endif %}
       </section>
 
-      <section class="panel" id="loaded-section">
-        <h2>2) Loaded Datasets</h2>
+      <section class="panel step-panel" id="loaded-section">
+        <div class="step-head">
+          <span class="step-index">2</span>
+          <div>
+            <h2>Loaded Datasets</h2>
+            <p class="step-sub">Review the selected studies before differential expression analysis.</p>
+          </div>
+        </div>
         <p class="note">
           Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
           State filter: {{ geo_loaded_summary.state_filter }}
@@ -160,12 +195,18 @@
             </tbody>
           </table>
         {% else %}
-          <p class="note">Select rows from GEO search and click "Load Selected Datasets".</p>
+          <p class="note">Select rows from GEO search and click "Run Step 2 Load Selected".</p>
         {% endif %}
       </section>
 
-      <section class="panel" id="analysis-section">
-        <h2>3) State Comparison Analysis</h2>
+      <section class="panel step-panel" id="analysis-section">
+        <div class="step-head">
+          <span class="step-index">3</span>
+          <div>
+            <h2>State Comparison Analysis</h2>
+            <p class="step-sub">Configure thresholds and run differential expression with enrichment.</p>
+          </div>
+        </div>
         <form action="{{ url_for('run_analysis') }}" method="post" class="inline-form" data-preserve-scroll="true">
           <label>
             Comparison State
@@ -196,7 +237,7 @@
               {% endfor %}
             </select>
           </label>
-          <button type="submit" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Analysis</button>
+          <button type="submit" class="run-btn" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Step 3 Analysis</button>
         </form>
 
         {% if analysis %}
@@ -275,7 +316,7 @@
               </table>
 
               <div class="table-action">
-                <button type="submit">Run Real Analysis With Selected Groups</button>
+                <button type="submit" class="run-btn">Run Analysis With Selected Groups</button>
               </div>
             </form>
           {% elif analysis.metadata.mode == "no_usable_matrix_data" %}
