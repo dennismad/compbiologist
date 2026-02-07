@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 
+from app.analysis import load_analysis_outputs, run_state_comparison_analysis, save_analysis_outputs
 from app.config import (
+    ANALYSIS_DGE_PATH,
+    ANALYSIS_RESULT_PATH,
     GEO_LOADED_CSV_PATH,
     GEO_LOADED_JSON_PATH,
     GEO_PROCESSED_PATH,
@@ -105,6 +108,18 @@ def run_geo_load_selection(selected_ids: list[str]) -> dict:
     )
 
 
+def run_comparison_analysis(state_profile: str, padj_cutoff: float, log2fc_cutoff: float) -> dict:
+    loaded = load_cached_loaded_geo_payload()
+    payload = run_state_comparison_analysis(
+        state_profile=state_profile,
+        loaded_items=loaded.get("items", []),
+        padj_cutoff=padj_cutoff,
+        log2fc_cutoff=log2fc_cutoff,
+    )
+    save_analysis_outputs(ANALYSIS_RESULT_PATH, ANALYSIS_DGE_PATH, payload)
+    return payload
+
+
 def load_cached_summary() -> dict | None:
     if not SUMMARY_PATH.exists():
         return None
@@ -168,3 +183,7 @@ def load_cached_loaded_geo_payload() -> dict:
     payload["insights"] = build_geo_insights(enriched_items)
     payload["returned"] = len(enriched_items)
     return payload
+
+
+def load_cached_analysis_payload() -> dict | None:
+    return load_analysis_outputs(ANALYSIS_RESULT_PATH)

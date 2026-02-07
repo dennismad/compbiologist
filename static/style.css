@@ -160,6 +160,27 @@ a {
   gap: 0.5rem;
 }
 
+.two-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+  margin-top: 0.8rem;
+}
+
+.volcano {
+  width: 100%;
+  max-width: 100%;
+  min-height: 420px;
+  background: #fbfdfb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.axis {
+  stroke: #5d6a62;
+  stroke-width: 1.2;
+}
+
 footer {
   margin-top: 1rem;
   color: var(--muted);
@@ -169,5 +190,9 @@ footer {
 @media (max-width: 700px) {
   .inline-form input {
     min-width: 100%;
+  }
+
+  .two-col {
+    grid-template-columns: 1fr;
   }
 }

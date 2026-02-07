@@ -12,7 +12,11 @@ GEO_PROCESSED_PATH = DATA_DIR / "processed" / "geo_datasets.csv"
 GEO_SUMMARY_PATH = DATA_DIR / "processed" / "geo_summary.json"
 GEO_LOADED_JSON_PATH = DATA_DIR / "processed" / "geo_loaded.json"
 GEO_LOADED_CSV_PATH = DATA_DIR / "processed" / "geo_loaded.csv"
+GEO_MATRIX_CACHE_DIR = DATA_DIR / "raw" / "geo_matrix"
 GEO_SAMPLE_PATH = BASE_DIR / "app" / "sample_data" / "geo_sample.json"
+
+ANALYSIS_RESULT_PATH = DATA_DIR / "processed" / "analysis_result.json"
+ANALYSIS_DGE_PATH = DATA_DIR / "processed" / "analysis_dge.csv"
 
 UNIPROT_ENDPOINT = "https://rest.uniprot.org/uniprotkb/search"
 DEFAULT_QUERY = "reviewed:true AND organism_id:9606 AND keyword:KW-0418"

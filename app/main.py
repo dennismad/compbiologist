@@ -8,10 +8,11 @@ from flask import Flask, redirect, render_template, request, url_for
 from app.config import GEO_DEFAULT_FETCH_SIZE, GEO_DEFAULT_QUERY
 from app.geo import EXPERIMENT_TYPE_OPTIONS, STATE_FILTER_OPTIONS
 from app.pipeline import (
+    load_cached_analysis_payload,
     load_cached_geo_payload,
     load_cached_loaded_geo_payload,
     load_cached_summary,
-    load_processed_dataframe,
+    run_comparison_analysis,
     run_geo_load_selection,
     run_geo_pipeline,
     run_pipeline,
@@ -34,18 +35,10 @@ def create_app() -> Flask:
 
         geo_search_payload = load_cached_geo_payload()
         geo_loaded_payload = load_cached_loaded_geo_payload()
-
-        summary = payload["summary"]
-        metadata = payload["metadata"]
-        proteins = load_processed_dataframe()
-        max_bin = max(summary["length_distribution"].values() or [1])
+        analysis_payload = load_cached_analysis_payload()
 
         return render_template(
             "index.html",
-            summary=summary,
-            metadata=metadata,
-            proteins=proteins,
-            max_bin=max_bin,
             geo_search_summary={
                 "query": geo_search_payload.get("query", ""),
                 "source": geo_search_payload.get("source", "not_fetched"),
@@ -55,7 +48,7 @@ def create_app() -> Flask:
                 "experiment_filter": geo_search_payload.get("experiment_filter", "All"),
                 "state_filter": geo_search_payload.get("state_filter", "All"),
             },
-            geo_search_items=geo_search_payload.get("items", [])[:50],
+            geo_search_items=geo_search_payload.get("items", [])[:80],
             geo_loaded_summary={
                 "query": geo_loaded_payload.get("query", ""),
                 "source": geo_loaded_payload.get("source", "not_loaded"),
@@ -63,18 +56,14 @@ def create_app() -> Flask:
                 "species_filter": geo_loaded_payload.get("species_filter", ""),
                 "experiment_filter": geo_loaded_payload.get("experiment_filter", "All"),
                 "state_filter": geo_loaded_payload.get("state_filter", "All"),
-                "organism_distribution": geo_loaded_payload.get("insights", {}).get("organism_distribution", {}),
-                "sample_distribution": geo_loaded_payload.get("insights", {}).get("sample_distribution", {}),
-                "experiment_distribution": geo_loaded_payload.get("insights", {}).get("experiment_distribution", {}),
             },
-            geo_loaded_items=geo_loaded_payload.get("items", [])[:50],
-            geo_organism_max=max(geo_loaded_payload.get("insights", {}).get("organism_distribution", {}).values() or [1]),
-            geo_sample_max=max(geo_loaded_payload.get("insights", {}).get("sample_distribution", {}).values() or [1]),
-            geo_experiment_max=max(geo_loaded_payload.get("insights", {}).get("experiment_distribution", {}).values() or [1]),
+            geo_loaded_items=geo_loaded_payload.get("items", [])[:80],
             geo_default_query=GEO_DEFAULT_QUERY,
             geo_default_fetch_size=GEO_DEFAULT_FETCH_SIZE,
             experiment_type_options=EXPERIMENT_TYPE_OPTIONS,
             state_filter_options=STATE_FILTER_OPTIONS,
+            analysis=analysis_payload,
+            protein_metadata=payload.get("metadata", {}),
         )
 
     @app.post("/refresh")
@@ -109,6 +98,31 @@ def create_app() -> Flask:
     def geo_load_selected():
         selected_ids = request.form.getlist("selected_ids")
         run_geo_load_selection(selected_ids)
+        return redirect(url_for("index"))
+
+    @app.post("/analysis/run")
+    def run_analysis():
+        state_profile = request.form.get("analysis_state", "Disease vs Healthy").strip() or "Disease vs Healthy"
+        padj_raw = request.form.get("padj_cutoff", "0.05").strip()
+        lfc_raw = request.form.get("log2fc_cutoff", "1.0").strip()
+
+        try:
+            padj_cutoff = float(padj_raw)
+        except ValueError:
+            padj_cutoff = 0.05
+        try:
+            log2fc_cutoff = float(lfc_raw)
+        except ValueError:
+            log2fc_cutoff = 1.0
+
+        padj_cutoff = min(max(padj_cutoff, 1e-6), 1.0)
+        log2fc_cutoff = min(max(log2fc_cutoff, 0.1), 5.0)
+
+        run_comparison_analysis(
+            state_profile=state_profile,
+            padj_cutoff=padj_cutoff,
+            log2fc_cutoff=log2fc_cutoff,
+        )
         return redirect(url_for("index"))
 
     return app

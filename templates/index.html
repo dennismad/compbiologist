@@ -5,19 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Virtual Computational Biologist</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+    <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   </head>
   <body>
     <main class="container">
       <header>
         <h1>Virtual Computational Biologist</h1>
-        <p>Public protein data + GEO dataset discovery, local analysis, and web-based results.</p>
-        <form action="{{ url_for('refresh') }}" method="post">
-          <button type="submit">Refresh Protein Data</button>
-        </form>
+        <p>State comparison workflow with GEO search, dataset selection, enrichment, and volcano visualization.</p>
       </header>
 
       <section class="panel">
-        <h2>GEO Search And Load</h2>
+        <h2>1) GEO Search</h2>
         <form action="{{ url_for('geo_search') }}" method="post" class="inline-form">
           <label>
             Query
@@ -98,19 +96,18 @@
             </table>
           </form>
         {% else %}
-          <p class="note">No GEO search results yet. Run a GEO search, then select datasets to load.</p>
+          <p class="note">No GEO search results yet. Run a GEO search first.</p>
         {% endif %}
       </section>
 
-      {% if geo_loaded_summary.returned > 0 %}
-        <section class="panel">
-          <h2>Loaded GEO Datasets</h2>
-          <p class="note">
-            Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query }} |
-            Species filter: {{ geo_loaded_summary.species_filter or "none" }} |
-            Experiment filter: {{ geo_loaded_summary.experiment_filter }} |
-            State filter: {{ geo_loaded_summary.state_filter }}
-          </p>
+      <section class="panel">
+        <h2>2) Loaded Datasets</h2>
+        <p class="note">
+          Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
+          State filter: {{ geo_loaded_summary.state_filter }}
+        </p>
+
+        {% if geo_loaded_items %}
           <table>
             <thead>
               <tr>
@@ -120,7 +117,6 @@
                 <th>Experiment</th>
                 <th>State</th>
                 <th>Samples</th>
-                <th>Links</th>
               </tr>
             </thead>
             <tbody>
@@ -132,140 +128,167 @@
                   <td>{{ row.experiment_type }}</td>
                   <td>{{ row.state_profile }}</td>
                   <td>{{ row.n_samples }}</td>
-                  <td class="link-list">
-                    {% if row.geo_link %}
-                      <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">GEO</a>
-                    {% endif %}
-                    {% if row.pubmed_link %}
-                      <a href="{{ row.pubmed_link }}" target="_blank" rel="noopener noreferrer">PubMed</a>
-                    {% endif %}
-                  </td>
                 </tr>
               {% endfor %}
             </tbody>
           </table>
-        </section>
-
-        <section class="panel">
-          <h2>Loaded GEO Organism Distribution</h2>
-          {% for label, count in geo_loaded_summary.organism_distribution.items() %}
-            <div class="bar-row">
-              <span class="bar-label">{{ label }}</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: {{ (count / geo_organism_max * 100) if geo_organism_max else 0 }}%"></div>
-              </div>
-              <span class="bar-value">{{ count }}</span>
-            </div>
-          {% endfor %}
-        </section>
-
-        <section class="panel">
-          <h2>Loaded GEO Experiment Types</h2>
-          {% for label, count in geo_loaded_summary.experiment_distribution.items() %}
-            <div class="bar-row">
-              <span class="bar-label">{{ label }}</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: {{ (count / geo_experiment_max * 100) if geo_experiment_max else 0 }}%"></div>
-              </div>
-              <span class="bar-value">{{ count }}</span>
-            </div>
-          {% endfor %}
-        </section>
-
-        <section class="panel">
-          <h2>Loaded GEO Samples Per Dataset</h2>
-          {% for label, count in geo_loaded_summary.sample_distribution.items() %}
-            <div class="bar-row">
-              <span class="bar-label">{{ label }}</span>
-              <div class="bar-track">
-                <div class="bar-fill" style="width: {{ (count / geo_sample_max * 100) if geo_sample_max else 0 }}%"></div>
-              </div>
-              <span class="bar-value">{{ count }}</span>
-            </div>
-          {% endfor %}
-        </section>
-      {% else %}
-        <section class="panel">
-          <h2>Loaded GEO Datasets</h2>
-          <p class="note">Details will appear here after you select GEO datasets and click "Load Selected Datasets".</p>
-        </section>
-      {% endif %}
-
-      <section class="cards">
-        <article class="card">
-          <h2>Proteins</h2>
-          <p>{{ summary.n_proteins }}</p>
-        </article>
-        <article class="card">
-          <h2>Avg Length</h2>
-          <p>{{ summary.avg_length }}</p>
-        </article>
-        <article class="card">
-          <h2>Median Length</h2>
-          <p>{{ summary.median_length }}</p>
-        </article>
-        <article class="card">
-          <h2>Avg Annotation</h2>
-          <p>{{ summary.avg_annotation_score }}</p>
-        </article>
+        {% else %}
+          <p class="note">Select rows from GEO search and click "Load Selected Datasets".</p>
+        {% endif %}
       </section>
 
       <section class="panel">
-        <h2>Length Distribution</h2>
-        {% for label, count in summary.length_distribution.items() %}
-          <div class="bar-row">
-            <span class="bar-label">{{ label }}</span>
-            <div class="bar-track">
-              <div class="bar-fill" style="width: {{ (count / max_bin * 100) if max_bin else 0 }}%"></div>
+        <h2>3) State Comparison Analysis</h2>
+        <form action="{{ url_for('run_analysis') }}" method="post" class="inline-form">
+          <label>
+            Comparison State
+            <select name="analysis_state">
+              {% for state_option in state_filter_options %}
+                {% if state_option != 'All' %}
+                  <option value="{{ state_option }}" {% if analysis and analysis.metadata.state_profile == state_option %}selected{% endif %}>{{ state_option }}</option>
+                {% endif %}
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            padj cutoff
+            <input type="text" inputmode="decimal" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff if analysis else '0.05' }}" />
+          </label>
+          <label>
+            |log2FC| cutoff
+            <input type="text" inputmode="decimal" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff if analysis else '1.0' }}" />
+          </label>
+          <button type="submit" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Analysis</button>
+        </form>
+
+        {% if analysis %}
+          <p class="note">
+            Mode: {{ analysis.metadata.mode }}{% if analysis.metadata.real_dataset_used %} | GEO matrix: {{ analysis.metadata.real_dataset_used }}{% endif %}{% if analysis.metadata.group_a_n and analysis.metadata.group_b_n %} | {{ analysis.metadata.group_a_name }} n={{ analysis.metadata.group_a_n }}, {{ analysis.metadata.group_b_name }} n={{ analysis.metadata.group_b_n }}{% endif %}
+          </p>
+          {% if analysis.metadata.notes %}
+            <p class="note">{{ analysis.metadata.notes|join(' ; ') }}</p>
+          {% endif %}
+
+          <section class="cards">
+            <article class="card"><h2>Datasets</h2><p>{{ analysis.metadata.n_datasets }}</p></article>
+            <article class="card"><h2>Genes</h2><p>{{ analysis.metadata.n_genes }}</p></article>
+            <article class="card"><h2>Upregulated</h2><p>{{ analysis.metadata.n_up }}</p></article>
+            <article class="card"><h2>Downregulated</h2><p>{{ analysis.metadata.n_down }}</p></article>
+          </section>
+
+          <h3>Volcano Plot</h3>
+          <div id="volcano-plot" class="volcano"></div>
+
+          <div class="two-col">
+            <div>
+              <h3>Top Upregulated Genes</h3>
+              <table>
+                <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                <tbody>
+                  {% for row in analysis.top_up %}
+                    <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                  {% endfor %}
+                  {% if not analysis.top_up %}
+                    <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
             </div>
-            <span class="bar-value">{{ count }}</span>
+            <div>
+              <h3>Top Downregulated Genes</h3>
+              <table>
+                <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                <tbody>
+                  {% for row in analysis.top_down %}
+                    <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                  {% endfor %}
+                  {% if not analysis.top_down %}
+                    <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
           </div>
-        {% endfor %}
-      </section>
 
-      <section class="panel">
-        <h2>Top Gene Symbols</h2>
-        <table>
-          <thead>
-            <tr><th>Gene</th><th>Count</th></tr>
-          </thead>
-          <tbody>
-            {% for gene, count in summary.top_genes.items() %}
-              <tr><td>{{ gene }}</td><td>{{ count }}</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </section>
-
-      <section class="panel">
-        <h2>Protein Preview</h2>
-        <table>
-          <thead>
-            <tr>
-              <th>Accession</th>
-              <th>Protein</th>
-              <th>Gene</th>
-              <th>Length</th>
-              <th>Annotation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in proteins %}
-              <tr>
-                <td>{{ row.accession }}</td>
-                <td>{{ row.protein_name }}</td>
-                <td>{{ row.gene_names }}</td>
-                <td>{{ row.length }}</td>
-                <td>{{ row.annotation_score }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+          <div class="two-col">
+            <div>
+              <h3>Enrichment (Up)</h3>
+              <table>
+                <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
+                <tbody>
+                  {% for row in analysis.enrichment_up %}
+                    <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                  {% endfor %}
+                  {% if not analysis.enrichment_up %}
+                    <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+            <div>
+              <h3>Enrichment (Down)</h3>
+              <table>
+                <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
+                <tbody>
+                  {% for row in analysis.enrichment_down %}
+                    <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                  {% endfor %}
+                  {% if not analysis.enrichment_down %}
+                    <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
+                  {% endif %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        {% else %}
+          <p class="note">Run analysis after loading datasets to generate volcano and enrichment outputs.</p>
+        {% endif %}
       </section>
 
       <footer>
-        <p>Protein source: {{ metadata.data_source }} | Last updated (UTC): {{ metadata.last_updated_utc }}</p>
+        <p>Protein refresh metadata: {{ protein_metadata.data_source }} | {{ protein_metadata.last_updated_utc }}</p>
       </footer>
     </main>
+    {% if analysis %}
+      <script>
+        (() => {
+          const points = {{ analysis.volcano.points | tojson }};
+          const groups = {
+            "Upregulated": { x: [], y: [], text: [], color: "#c0392b" },
+            "Downregulated": { x: [], y: [], text: [], color: "#1f78b4" },
+            "Not Significant": { x: [], y: [], text: [], color: "#8c9a91" },
+          };
+
+          for (const p of points) {
+            const g = groups[p.group] || groups["Not Significant"];
+            g.x.push(p.x);
+            g.y.push(p.y);
+            g.text.push(`${p.gene}<br>log2FC=${p.x.toFixed(3)}<br>-log10(padj)=${p.y.toFixed(3)}`);
+          }
+
+          const traces = Object.entries(groups).map(([name, g]) => ({
+            x: g.x,
+            y: g.y,
+            text: g.text,
+            mode: "markers",
+            type: "scattergl",
+            name,
+            hovertemplate: "%{text}<extra></extra>",
+            marker: { size: 6, color: g.color, opacity: 0.8 }
+          }));
+
+          const layout = {
+            margin: { l: 50, r: 20, t: 20, b: 50 },
+            paper_bgcolor: "#fbfdfb",
+            plot_bgcolor: "#fbfdfb",
+            xaxis: { title: "log2 Fold Change", zeroline: true, zerolinecolor: "#4d5a52" },
+            yaxis: { title: "-log10 adjusted p-value", zeroline: false },
+            legend: { orientation: "h", y: 1.1 }
+          };
+
+          Plotly.newPlot("volcano-plot", traces, layout, { responsive: true, displaylogo: false });
+        })();
+      </script>
+    {% endif %}
   </body>
 </html>

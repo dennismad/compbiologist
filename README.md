@@ -25,6 +25,13 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
   - experiment-type filter (`Single-cell RNA-seq`, `RNA-seq`, `Microarray`, etc.)
 - After search, select datasets and click `Load Selected Datasets`.
 - GEO detail tables/charts are shown only for loaded datasets.
+- Run `State Comparison Analysis` to generate:
+  - volcano plot
+  - top up/down genes
+  - pathway enrichment (up and down)
+  - real GEO matrix differential expression (when a selected GSE has usable series-matrix + sample-group labels)
+  - automatic fallback to prototype mode if real GEO matrix processing is not possible
+  - current implementation analyzes the first loaded GSE that yields valid groups; multi-study meta-analysis is a next step
 
 ## Pipeline only (CLI)
 
