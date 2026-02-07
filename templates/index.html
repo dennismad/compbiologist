@@ -88,7 +88,13 @@
                   {% set dataset_id = row.accession or row.uid %}
                   <tr>
                     <td><input type="checkbox" name="selected_ids" value="{{ dataset_id }}" {% if not row.analyzable %}disabled{% endif %} /></td>
-                    <td>{{ dataset_id }}</td>
+                    <td>
+                      {% if row.geo_link %}
+                        <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">{{ dataset_id }}</a>
+                      {% else %}
+                        {{ dataset_id }}
+                      {% endif %}
+                    </td>
                     <td>{{ row.title }}</td>
                     <td>{{ row.organism }}</td>
                     <td>{{ row.experiment_type }}</td>
@@ -136,7 +142,14 @@
             <tbody>
               {% for row in geo_loaded_items %}
                 <tr>
-                  <td>{{ row.accession or row.uid }}</td>
+                  <td>
+                    {% set loaded_id = row.accession or row.uid %}
+                    {% if row.geo_link %}
+                      <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">{{ loaded_id }}</a>
+                    {% else %}
+                      {{ loaded_id }}
+                    {% endif %}
+                  </td>
                   <td>{{ row.title }}</td>
                   <td>{{ row.organism }}</td>
                   <td>{{ row.experiment_type }}</td>
@@ -295,7 +308,17 @@
                   <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
                   <tbody>
                     {% for row in analysis.top_up %}
-                      <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                      <tr>
+                        <td>
+                          {% if row.gene_url %}
+                            <a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>
+                          {% else %}
+                            {{ row.gene }}
+                          {% endif %}
+                        </td>
+                        <td>{{ '%.2f'|format(row.log2fc) }}</td>
+                        <td>{{ '%.3g'|format(row.padj) }}</td>
+                      </tr>
                     {% endfor %}
                     {% if not analysis.top_up %}
                       <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
@@ -309,7 +332,17 @@
                   <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
                   <tbody>
                     {% for row in analysis.top_down %}
-                      <tr><td>{{ row.gene }}</td><td>{{ '%.2f'|format(row.log2fc) }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                      <tr>
+                        <td>
+                          {% if row.gene_url %}
+                            <a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>
+                          {% else %}
+                            {{ row.gene }}
+                          {% endif %}
+                        </td>
+                        <td>{{ '%.2f'|format(row.log2fc) }}</td>
+                        <td>{{ '%.3g'|format(row.padj) }}</td>
+                      </tr>
                     {% endfor %}
                     {% if not analysis.top_down %}
                       <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
@@ -326,7 +359,17 @@
                   <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
                   <tbody>
                     {% for row in analysis.enrichment_up %}
-                      <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                      <tr>
+                        <td>
+                          {% if row.pathway_url %}
+                            <a href="{{ row.pathway_url }}" target="_blank" rel="noopener noreferrer">{{ row.pathway }}</a>
+                          {% else %}
+                            {{ row.pathway }}
+                          {% endif %}
+                        </td>
+                        <td>{{ row.overlap }}/{{ row.set_size }}</td>
+                        <td>{{ '%.3g'|format(row.padj) }}</td>
+                      </tr>
                     {% endfor %}
                     {% if not analysis.enrichment_up %}
                       <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
@@ -340,7 +383,17 @@
                   <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
                   <tbody>
                     {% for row in analysis.enrichment_down %}
-                      <tr><td>{{ row.pathway }}</td><td>{{ row.overlap }}/{{ row.set_size }}</td><td>{{ '%.3g'|format(row.padj) }}</td></tr>
+                      <tr>
+                        <td>
+                          {% if row.pathway_url %}
+                            <a href="{{ row.pathway_url }}" target="_blank" rel="noopener noreferrer">{{ row.pathway }}</a>
+                          {% else %}
+                            {{ row.pathway }}
+                          {% endif %}
+                        </td>
+                        <td>{{ row.overlap }}/{{ row.set_size }}</td>
+                        <td>{{ '%.3g'|format(row.padj) }}</td>
+                      </tr>
                     {% endfor %}
                     {% if not analysis.enrichment_down %}
                       <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>

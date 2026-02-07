@@ -5,6 +5,7 @@ import json
 import math
 import random
 from pathlib import Path
+from urllib.parse import quote_plus
 
 import pandas as pd
 
@@ -71,6 +72,22 @@ def _sanitize_enrichment_mode(mode: str | None) -> str:
     return value
 
 
+def _ensembl_gene_url(gene_id: str) -> str:
+    gene = str(gene_id).strip()
+    if not gene:
+        return ""
+    if gene.upper().startswith("ENS"):
+        return f"https://www.ensembl.org/id/{quote_plus(gene)}"
+    return f"https://www.ensembl.org/Multi/Search/Results?q={quote_plus(gene)};site=ensembl"
+
+
+def _pathway_search_url(pathway_name: str) -> str:
+    query = quote_plus(str(pathway_name).strip())
+    if not query:
+        return ""
+    return f"https://reactome.org/content/query?q={query}"
+
+
 def generate_differential_expression(state_profile: str, dataset_ids: list[str]) -> pd.DataFrame:
     rng = random.Random(_seed_from_context(state_profile, dataset_ids))
     target = set(STATE_SIGNAL_GENES.get(state_profile, []))
@@ -132,6 +149,9 @@ def run_enrichment(
             user_threshold=padj_cutoff,
         )
         if module_rows:
+            for row in module_rows:
+                if not row.get("pathway_url"):
+                    row["pathway_url"] = _pathway_search_url(str(row.get("pathway", "")))
             return module_rows, None
         if mode == "gprofiler":
             return [], module_note
@@ -158,6 +178,7 @@ def run_enrichment(
                 "set_size": m,
                 "gene_ratio": round(len(overlap) / m, 3),
                 "pvalue": pval,
+                "pathway_url": _pathway_search_url(pathway),
             }
         )
 
@@ -361,6 +382,7 @@ def run_state_comparison_analysis(
     df["direction"] = "neutral"
     df.loc[(df["padj"] <= padj_cutoff) & (df["log2fc"] >= log2fc_cutoff), "direction"] = "up"
     df.loc[(df["padj"] <= padj_cutoff) & (df["log2fc"] <= -log2fc_cutoff), "direction"] = "down"
+    df["gene_url"] = df["gene"].map(_ensembl_gene_url)
 
     n_up = int((df["direction"] == "up").sum())
     n_down = int((df["direction"] == "down").sum())
@@ -369,14 +391,14 @@ def run_state_comparison_analysis(
         df[df["direction"] == "up"]
         .sort_values(["padj", "log2fc"], ascending=[True, False])
         .head(10)
-        [["gene", "log2fc", "padj"]]
+        [["gene", "gene_url", "log2fc", "padj"]]
         .to_dict(orient="records")
     )
     top_down = (
         df[df["direction"] == "down"]
         .sort_values(["padj", "log2fc"], ascending=[True, True])
         .head(10)
-        [["gene", "log2fc", "padj"]]
+        [["gene", "gene_url", "log2fc", "padj"]]
         .to_dict(orient="records")
     )
 
@@ -436,7 +458,7 @@ def run_state_comparison_analysis(
         "top_down": top_down,
         "enrichment_up": enrichment_up,
         "enrichment_down": enrichment_down,
-        "dge_rows": df[["gene", "log2fc", "pvalue", "padj", "neg_log10_padj", "direction"]].to_dict(orient="records"),
+        "dge_rows": df[["gene", "gene_url", "log2fc", "pvalue", "padj", "neg_log10_padj", "direction"]].to_dict(orient="records"),
     }
 
 

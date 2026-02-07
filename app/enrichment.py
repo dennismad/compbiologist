@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import quote_plus
 from typing import Any
 
 import pandas as pd
@@ -50,6 +51,21 @@ def _load_gprofiler() -> tuple[Any | None, str | None]:
     except Exception as exc:
         return None, f"gprofiler-official unavailable: {exc}"
     return GProfiler, None
+
+
+def _build_pathway_url(source: str, native: str, name: str) -> str:
+    src = str(source).strip().upper()
+    term = str(native).strip()
+    if src.startswith("GO") and term.startswith("GO:"):
+        return f"https://www.ebi.ac.uk/QuickGO/term/{term}"
+    if src == "REAC" and term:
+        return f"https://reactome.org/content/detail/{term}"
+    if src == "KEGG" and term:
+        return f"https://www.kegg.jp/entry/{term}"
+    if src == "WP" and term:
+        return f"https://www.wikipathways.org/pathways/{term}.html"
+    query = quote_plus(f"{source} {native} {name}".strip())
+    return f"https://reactome.org/content/query?q={query}"
 
 
 def run_gprofiler_enrichment(
@@ -103,6 +119,7 @@ def run_gprofiler_enrichment(
                 "overlap": overlap,
                 "set_size": set_size,
                 "padj": padj,
+                "pathway_url": _build_pathway_url(source, native, name),
             }
         )
 
