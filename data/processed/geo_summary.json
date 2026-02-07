@@ -1,14 +1,14 @@
 {
-  "query": "NASH",
+  "query": "Breast cancer",
   "source": "geo_sqlite",
   "error": "",
-  "returned": 1,
-  "total_found": 1,
+  "returned": 20,
+  "total_found": 47,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
   "state_filter": "Treated vs Untreated",
   "only_analyzable": true,
   "requested_retmax": 20,
-  "returned_before_analyzable_filter": 1,
-  "returned_after_analyzable_filter": 1
+  "returned_before_analyzable_filter": 47,
+  "returned_after_analyzable_filter": 20
 }
