@@ -1,4 +1,7 @@
-PYTHON ?= python3
+PYTHON ?= .venv/bin/python
+ifeq ($(wildcard $(PYTHON)),)
+PYTHON := python3
+endif
 
 .PHONY: venv install run refresh test check
 
