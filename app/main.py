@@ -44,9 +44,11 @@ def create_app() -> Flask:
                 "source": geo_search_payload.get("source", "not_fetched"),
                 "total_found": geo_search_payload.get("total_found", 0),
                 "returned": len(geo_search_payload.get("items", [])),
+                "returned_before_analyzable_filter": geo_search_payload.get("returned_before_analyzable_filter", len(geo_search_payload.get("items", []))),
                 "species_filter": geo_search_payload.get("species_filter", ""),
                 "experiment_filter": geo_search_payload.get("experiment_filter", "All"),
                 "state_filter": geo_search_payload.get("state_filter", "All"),
+                "only_analyzable": geo_search_payload.get("only_analyzable", True),
             },
             geo_search_items=geo_search_payload.get("items", [])[:80],
             geo_loaded_summary={
@@ -69,7 +71,7 @@ def create_app() -> Flask:
     @app.post("/refresh")
     def refresh():
         run_pipeline()
-        return redirect(url_for("index"))
+        return redirect(url_for("index", _anchor="geo-search-section"))
 
     @app.post("/geo/search")
     def geo_search():
@@ -77,6 +79,7 @@ def create_app() -> Flask:
         species_filter = request.form.get("species", "").strip()
         experiment_filter = request.form.get("experiment_type", "All").strip() or "All"
         state_filter = request.form.get("state_filter", "All").strip() or "All"
+        only_analyzable = request.form.get("only_analyzable", "") == "on"
 
         retmax_raw = request.form.get("retmax", str(GEO_DEFAULT_FETCH_SIZE)).strip()
         try:
@@ -91,14 +94,15 @@ def create_app() -> Flask:
             species_filter=species_filter,
             experiment_filter=experiment_filter,
             state_filter=state_filter,
+            only_analyzable=only_analyzable,
         )
-        return redirect(url_for("index"))
+        return redirect(url_for("index", _anchor="geo-search-section"))
 
     @app.post("/geo/load-selected")
     def geo_load_selected():
         selected_ids = request.form.getlist("selected_ids")
         run_geo_load_selection(selected_ids)
-        return redirect(url_for("index"))
+        return redirect(url_for("index", _anchor="loaded-section"))
 
     @app.post("/analysis/run")
     def run_analysis():
@@ -124,7 +128,7 @@ def create_app() -> Flask:
             log2fc_cutoff=log2fc_cutoff,
             manual_choice=None,
         )
-        return redirect(url_for("index"))
+        return redirect(url_for("index", _anchor="analysis-section"))
 
     @app.post("/analysis/run-manual")
     def run_analysis_manual():
@@ -158,7 +162,7 @@ def create_app() -> Flask:
             log2fc_cutoff=log2fc_cutoff,
             manual_choice=manual_choice,
         )
-        return redirect(url_for("index"))
+        return redirect(url_for("index", _anchor="analysis-section"))
 
     return app
 

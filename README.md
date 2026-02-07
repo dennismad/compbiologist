@@ -23,6 +23,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
 - GEO search is at the top of the page and supports filters:
   - species text filter
   - experiment-type filter (`Single-cell RNA-seq`, `RNA-seq`, `Microarray`, etc.)
+  - `Only analyzable datasets` pre-check (attempts to keep only GEO entries with parseable expression matrices)
 - After search, select datasets and click `Load Selected Datasets`.
 - GEO detail tables/charts are shown only for loaded datasets.
 - Run `State Comparison Analysis` to generate:
@@ -30,7 +31,7 @@ Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
   - top up/down genes
   - pathway enrichment (up and down)
   - real GEO matrix differential expression (when a selected GSE has usable series-matrix + sample-group labels)
-  - if automatic grouping fails, the UI now requires manual sample-group selection before real DE can run
+- if automatic grouping fails, the UI now requires manual sample-group selection before real DE can run
   - current implementation analyzes one loaded GSE at a time (manual group selection supported when auto-detection fails)
 
 ## Pipeline only (CLI)

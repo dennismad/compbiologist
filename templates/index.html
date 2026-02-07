@@ -14,9 +14,9 @@
         <p>State comparison workflow with GEO search, dataset selection, enrichment, and volcano visualization.</p>
       </header>
 
-      <section class="panel">
+      <section class="panel" id="geo-search-section">
         <h2>1) GEO Search</h2>
-        <form action="{{ url_for('geo_search') }}" method="post" class="inline-form">
+        <form action="{{ url_for('geo_search') }}" method="post" class="inline-form" data-preserve-scroll="true">
           <label>
             Query
             <input type="text" name="query" value="{{ geo_search_summary.query or geo_default_query }}" />
@@ -45,16 +45,21 @@
             Count
             <input type="number" name="retmax" min="1" max="100" value="{{ geo_default_fetch_size }}" />
           </label>
+          <label class="inline-check">
+            <input type="checkbox" name="only_analyzable" {% if geo_search_summary.only_analyzable %}checked{% endif %} />
+            Only analyzable datasets
+          </label>
           <button type="submit">Search GEO</button>
         </form>
 
         <p class="note">
           Source: {{ geo_search_summary.source }} | Query: {{ geo_search_summary.query or "none" }} |
-          Returned: {{ geo_search_summary.returned }} | Total found: {{ geo_search_summary.total_found }}
+          Returned: {{ geo_search_summary.returned }}{% if geo_search_summary.only_analyzable %} (from {{ geo_search_summary.returned_before_analyzable_filter }} prefiltered){% endif %} |
+          Total found: {{ geo_search_summary.total_found }}
         </p>
 
         {% if geo_search_items %}
-          <form action="{{ url_for('geo_load_selected') }}" method="post">
+          <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
             <div class="table-action">
               <button type="submit">Load Selected Datasets</button>
             </div>
@@ -67,6 +72,7 @@
                   <th>Species</th>
                   <th>Experiment</th>
                   <th>State</th>
+                  <th>Analyzable</th>
                   <th>Samples</th>
                   <th>Links</th>
                 </tr>
@@ -81,6 +87,7 @@
                     <td>{{ row.organism }}</td>
                     <td>{{ row.experiment_type }}</td>
                     <td>{{ row.state_profile }}</td>
+                    <td title="{{ row.analyzable_detail }}">{% if row.analyzable %}Yes{% else %}No{% endif %}</td>
                     <td>{{ row.n_samples }}</td>
                     <td class="link-list">
                       {% if row.geo_link %}
@@ -100,7 +107,7 @@
         {% endif %}
       </section>
 
-      <section class="panel">
+      <section class="panel" id="loaded-section">
         <h2>2) Loaded Datasets</h2>
         <p class="note">
           Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
@@ -137,9 +144,9 @@
         {% endif %}
       </section>
 
-      <section class="panel">
+      <section class="panel" id="analysis-section">
         <h2>3) State Comparison Analysis</h2>
-        <form action="{{ url_for('run_analysis') }}" method="post" class="inline-form">
+        <form action="{{ url_for('run_analysis') }}" method="post" class="inline-form" data-preserve-scroll="true">
           <label>
             Comparison State
             <select name="analysis_state">
@@ -170,7 +177,7 @@
           {% endif %}
           {% if analysis.metadata.mode == "needs_group_selection" and analysis.group_choice %}
             <h3>Manual Group Selection Required</h3>
-            <form action="{{ url_for('run_analysis_manual') }}" method="post" class="panel">
+            <form action="{{ url_for('run_analysis_manual') }}" method="post" class="panel" data-preserve-scroll="true">
               <input type="hidden" name="analysis_state" value="{{ analysis.metadata.state_profile }}" />
               <input type="hidden" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff }}" />
               <input type="hidden" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff }}" />
@@ -242,6 +249,12 @@
                 <button type="submit">Run Real Analysis With Selected Groups</button>
               </div>
             </form>
+          {% elif analysis.metadata.mode == "no_usable_matrix_data" %}
+            <h3>Real Analysis Blocked</h3>
+            <p class="note">
+              The selected dataset does not expose a usable expression matrix for this pipeline.
+              Load a different GSE (with tabular expression/count matrix files) and rerun analysis.
+            </p>
           {% elif analysis.metadata.n_genes > 0 %}
             <section class="cards">
               <article class="card"><h2>Datasets</h2><p>{{ analysis.metadata.n_datasets }}</p></article>
@@ -326,6 +339,25 @@
         <p>Protein refresh metadata: {{ protein_metadata.data_source }} | {{ protein_metadata.last_updated_utc }}</p>
       </footer>
     </main>
+    <script>
+      (() => {
+        const key = "scrollYBeforePost";
+        const pending = window.sessionStorage.getItem(key);
+        if (pending) {
+          const y = parseInt(pending, 10);
+          if (!Number.isNaN(y)) {
+            window.scrollTo(0, y);
+          }
+          window.sessionStorage.removeItem(key);
+        }
+
+        document.querySelectorAll("form[data-preserve-scroll='true']").forEach((form) => {
+          form.addEventListener("submit", () => {
+            window.sessionStorage.setItem(key, String(window.scrollY));
+          });
+        });
+      })();
+    </script>
     {% if analysis and analysis.metadata.n_genes > 0 %}
       <script>
         (() => {

@@ -93,6 +93,13 @@ button {
   color: var(--muted);
 }
 
+.inline-check {
+  flex-direction: row !important;
+  align-items: center;
+  gap: 0.5rem !important;
+  margin-bottom: 0.2rem;
+}
+
 .inline-form input {
   min-width: 200px;
   padding: 0.45rem;

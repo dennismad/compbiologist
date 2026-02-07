@@ -314,6 +314,8 @@ def write_geo_artifacts(
     species_filter: str = "",
     experiment_filter: str = "All",
     state_filter: str = "All",
+    only_analyzable: bool = False,
+    returned_before_analyzable_filter: int | None = None,
 ) -> dict:
     raw_path.parent.mkdir(parents=True, exist_ok=True)
     processed_path.parent.mkdir(parents=True, exist_ok=True)
@@ -325,6 +327,9 @@ def write_geo_artifacts(
         "species_filter": species_filter,
         "experiment_filter": experiment_filter,
         "state_filter": state_filter,
+        "only_analyzable": only_analyzable,
+        "returned_before_analyzable_filter": returned_before_analyzable_filter if returned_before_analyzable_filter is not None else len(result.items),
+        "returned_after_analyzable_filter": len(result.items),
         "items": result.items,
     }
     raw_path.write_text(json.dumps(raw_payload, indent=2), encoding="utf-8")
@@ -337,6 +342,8 @@ def write_geo_artifacts(
             "organism",
             "experiment_type",
             "state_profile",
+            "analyzable",
+            "analyzable_detail",
             "n_samples",
             "gse",
             "pubmed_id",
@@ -357,6 +364,9 @@ def write_geo_artifacts(
         "species_filter": species_filter,
         "experiment_filter": experiment_filter,
         "state_filter": state_filter,
+        "only_analyzable": only_analyzable,
+        "returned_before_analyzable_filter": returned_before_analyzable_filter if returned_before_analyzable_filter is not None else len(result.items),
+        "returned_after_analyzable_filter": len(result.items),
     }
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 

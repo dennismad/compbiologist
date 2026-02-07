@@ -5,5 +5,5 @@
   "total_found": 1202,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
-  "state_filter": "Disease vs Healthy"
+  "state_filter": "All"
 }

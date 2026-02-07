@@ -7,6 +7,7 @@ from app.analysis import load_analysis_outputs, run_state_comparison_analysis, s
 from app.config import (
     ANALYSIS_DGE_PATH,
     ANALYSIS_RESULT_PATH,
+    GEO_MATRIX_CACHE_DIR,
     GEO_LOADED_CSV_PATH,
     GEO_LOADED_JSON_PATH,
     GEO_PROCESSED_PATH,
@@ -16,6 +17,7 @@ from app.config import (
     RAW_DATA_PATH,
     SUMMARY_PATH,
 )
+from app.geo_expression import annotate_items_analyzable
 from app.data_sources import fetch_uniprot_data
 from app.geo import (
     GEOSearchResult,
@@ -66,6 +68,7 @@ def run_geo_pipeline(
     species_filter: str = "",
     experiment_filter: str = "All",
     state_filter: str = "All",
+    only_analyzable: bool = True,
 ) -> dict:
     result = search_geo_datasets(
         query=query,
@@ -75,12 +78,16 @@ def run_geo_pipeline(
         state_filter=state_filter,
     )
     filtered_items = enrich_geo_items(result.items)
+    annotated_items = annotate_items_analyzable(filtered_items, cache_dir=GEO_MATRIX_CACHE_DIR)
+    returned_before_analyzable_filter = len(annotated_items)
+    if only_analyzable:
+        annotated_items = [x for x in annotated_items if x.get("analyzable")]
 
     filtered_result = GEOSearchResult(
         source=result.source,
         query=result.query,
         total_found=result.total_found,
-        items=filtered_items,
+        items=annotated_items,
     )
 
     summary = write_geo_artifacts(
@@ -91,10 +98,12 @@ def run_geo_pipeline(
         species_filter=species_filter,
         experiment_filter=experiment_filter,
         state_filter=state_filter,
+        only_analyzable=only_analyzable,
+        returned_before_analyzable_filter=returned_before_analyzable_filter,
     )
     return {
         "summary": summary,
-        "items": filtered_items,
+        "items": annotated_items,
     }
 
 
@@ -153,6 +162,7 @@ def load_cached_geo_payload() -> dict:
             "species_filter": "",
             "experiment_filter": "All",
             "state_filter": "All",
+            "only_analyzable": True,
             "items": [],
             "insights": {
                 "organism_distribution": {},
@@ -161,6 +171,11 @@ def load_cached_geo_payload() -> dict:
             },
         }
     enriched_items = enrich_geo_items(payload.get("items", []))
+    for row in enriched_items:
+        if "analyzable" not in row:
+            row["analyzable"] = True
+        if "analyzable_detail" not in row:
+            row["analyzable_detail"] = "unknown"
     payload["items"] = enriched_items
     payload["insights"] = build_geo_insights(enriched_items)
     return payload
