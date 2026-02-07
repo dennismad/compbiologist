@@ -7,6 +7,7 @@ from app.analysis import load_analysis_outputs, run_state_comparison_analysis, s
 from app.config import (
     ANALYSIS_DGE_PATH,
     ANALYSIS_RESULT_PATH,
+    GEO_DEFAULT_FETCH_SIZE,
     GEO_MATRIX_CACHE_DIR,
     GEO_LOADED_CSV_PATH,
     GEO_LOADED_JSON_PATH,
@@ -30,6 +31,18 @@ from app.geo import (
     write_geo_artifacts,
 )
 from app.processing import process_protein_table
+
+
+def _dedupe_geo_items(items: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    seen: set[str] = set()
+    for row in items:
+        key = str(row.get("accession") or row.get("uid") or "").strip()
+        if not key or key in seen:
+            continue
+        seen.add(key)
+        out.append(row)
+    return out
 
 
 def ensure_data_dirs() -> None:
@@ -70,25 +83,54 @@ def run_geo_pipeline(
     state_filter: str = "All",
     only_analyzable: bool = True,
 ) -> dict:
-    result = search_geo_datasets(
-        query=query,
-        retmax=retmax,
-        species_filter=species_filter,
-        experiment_filter=experiment_filter,
-        state_filter=state_filter,
-    )
-    filtered_items = enrich_geo_items(result.items)
-    check_limit = len(filtered_items) if only_analyzable else 40
-    annotated_items = annotate_items_analyzable(filtered_items, cache_dir=GEO_MATRIX_CACHE_DIR, check_limit=check_limit)
-    returned_before_analyzable_filter = len(annotated_items)
-    if only_analyzable:
-        annotated_items = [x for x in annotated_items if x.get("analyzable")]
+    target = max(1, int(retmax))
+    page_size = min(200, max(target * 3, 50))
+    retstart = 0
+    total_found = 0
+    source = "geo"
+    accepted: list[dict] = []
+    accepted_before_analyzable = 0
+    max_pages = 12
 
+    for _ in range(max_pages):
+        page = search_geo_datasets(
+            query=query,
+            retmax=page_size,
+            retstart=retstart,
+            species_filter=species_filter,
+            experiment_filter=experiment_filter,
+            state_filter=state_filter,
+        )
+        source = page.source
+        total_found = page.total_found
+        if not page.items:
+            break
+
+        filtered_items = enrich_geo_items(page.items)
+        check_limit = len(filtered_items) if only_analyzable else 40
+        annotated_page = annotate_items_analyzable(filtered_items, cache_dir=GEO_MATRIX_CACHE_DIR, check_limit=check_limit)
+        annotated_page = _dedupe_geo_items(annotated_page)
+        accepted_before_analyzable += len(annotated_page)
+
+        if only_analyzable:
+            annotated_page = [x for x in annotated_page if x.get("analyzable")]
+        accepted.extend(annotated_page)
+        accepted = _dedupe_geo_items(accepted)
+        if len(accepted) >= target:
+            break
+
+        retstart += page_size
+        if retstart >= total_found:
+            break
+        if page.source != "geo":
+            break
+
+    accepted = accepted[:target]
     filtered_result = GEOSearchResult(
-        source=result.source,
-        query=result.query,
-        total_found=result.total_found,
-        items=annotated_items,
+        source=source,
+        query=query,
+        total_found=total_found,
+        items=accepted,
     )
 
     summary = write_geo_artifacts(
@@ -100,11 +142,12 @@ def run_geo_pipeline(
         experiment_filter=experiment_filter,
         state_filter=state_filter,
         only_analyzable=only_analyzable,
-        returned_before_analyzable_filter=returned_before_analyzable_filter,
+        requested_retmax=target,
+        returned_before_analyzable_filter=accepted_before_analyzable,
     )
     return {
         "summary": summary,
-        "items": annotated_items,
+        "items": accepted,
     }
 
 
@@ -164,6 +207,7 @@ def load_cached_geo_payload() -> dict:
             "experiment_filter": "All",
             "state_filter": "All",
             "only_analyzable": True,
+            "requested_retmax": GEO_DEFAULT_FETCH_SIZE,
             "items": [],
             "insights": {
                 "organism_distribution": {},

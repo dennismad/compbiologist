@@ -44,6 +44,7 @@ def create_app() -> Flask:
                 "source": geo_search_payload.get("source", "not_fetched"),
                 "total_found": geo_search_payload.get("total_found", 0),
                 "returned": len(geo_search_payload.get("items", [])),
+                "requested_retmax": geo_search_payload.get("requested_retmax", GEO_DEFAULT_FETCH_SIZE),
                 "returned_before_analyzable_filter": geo_search_payload.get("returned_before_analyzable_filter", len(geo_search_payload.get("items", []))),
                 "species_filter": geo_search_payload.get("species_filter", ""),
                 "experiment_filter": geo_search_payload.get("experiment_filter", "All"),
@@ -71,7 +72,7 @@ def create_app() -> Flask:
     @app.post("/refresh")
     def refresh():
         run_pipeline()
-        return redirect(url_for("index", _anchor="geo-search-section"))
+        return redirect(url_for("index"))
 
     @app.post("/geo/search")
     def geo_search():
@@ -96,13 +97,13 @@ def create_app() -> Flask:
             state_filter=state_filter,
             only_analyzable=only_analyzable,
         )
-        return redirect(url_for("index", _anchor="geo-search-section"))
+        return redirect(url_for("index"))
 
     @app.post("/geo/load-selected")
     def geo_load_selected():
         selected_ids = request.form.getlist("selected_ids")
         run_geo_load_selection(selected_ids)
-        return redirect(url_for("index", _anchor="loaded-section"))
+        return redirect(url_for("index"))
 
     @app.post("/analysis/run")
     def run_analysis():
@@ -128,7 +129,7 @@ def create_app() -> Flask:
             log2fc_cutoff=log2fc_cutoff,
             manual_choice=None,
         )
-        return redirect(url_for("index", _anchor="analysis-section"))
+        return redirect(url_for("index"))
 
     @app.post("/analysis/run-manual")
     def run_analysis_manual():
@@ -162,7 +163,7 @@ def create_app() -> Flask:
             log2fc_cutoff=log2fc_cutoff,
             manual_choice=manual_choice,
         )
-        return redirect(url_for("index", _anchor="analysis-section"))
+        return redirect(url_for("index"))
 
     return app
 

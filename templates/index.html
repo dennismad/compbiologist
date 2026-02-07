@@ -43,7 +43,7 @@
           </label>
           <label>
             Count
-            <input type="number" name="retmax" min="1" max="100" value="{{ geo_default_fetch_size }}" />
+            <input type="number" name="retmax" min="1" max="100" value="{{ geo_search_summary.requested_retmax or geo_default_fetch_size }}" />
           </label>
           <label class="inline-check">
             <input type="checkbox" name="only_analyzable" {% if geo_search_summary.only_analyzable %}checked{% endif %} />

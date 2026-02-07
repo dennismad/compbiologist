@@ -14,6 +14,7 @@ from app.config import (
     GEO_ESUMMARY_ENDPOINT,
     GEO_SAMPLE_PATH,
 )
+from app.geo_cache import get_cached_search, set_cached_search
 
 EXPERIMENT_TYPE_OPTIONS = [
     "All",
@@ -245,11 +246,28 @@ def build_geo_insights(items: list[dict]) -> dict:
 def search_geo_datasets(
     query: str = GEO_DEFAULT_QUERY,
     retmax: int = GEO_DEFAULT_FETCH_SIZE,
+    retstart: int = 0,
     species_filter: str = "",
     experiment_filter: str = "All",
     state_filter: str = "All",
 ) -> GEOSearchResult:
     """Search GEO datasets (GDS) via NCBI E-utilities and return normalized records."""
+    cached = get_cached_search(
+        query=query,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+        retmax=retmax,
+        retstart=retstart,
+    )
+    if cached is not None:
+        return GEOSearchResult(
+            source=str(cached.get("source", "geo_cache")),
+            query=str(cached.get("query", query)),
+            total_found=int(cached.get("total_found", 0)),
+            items=list(cached.get("items", [])),
+        )
+
     geo_term = _build_geo_term(query, species_filter=species_filter, experiment_filter=experiment_filter)
     requested_retmax = max(1, retmax)
     fetch_retmax = requested_retmax
@@ -262,6 +280,7 @@ def search_geo_datasets(
         "term": geo_term,
         "retmode": "json",
         "retmax": fetch_retmax,
+        "retstart": max(0, int(retstart)),
         "sort": "relevance",
     }
 
@@ -294,16 +313,45 @@ def search_geo_datasets(
             state_filter=state_filter,
         )
         items = items[:requested_retmax]
+        set_cached_search(
+            query=query,
+            species_filter=species_filter,
+            experiment_filter=experiment_filter,
+            state_filter=state_filter,
+            retmax=retmax,
+            retstart=retstart,
+            payload={
+                "source": "geo",
+                "query": query,
+                "total_found": total_found,
+                "items": items,
+            },
+        )
         return GEOSearchResult(source="geo", query=query, total_found=total_found, items=items)
     except Exception:
         sample = json.loads(GEO_SAMPLE_PATH.read_text(encoding="utf-8"))
         items = enrich_geo_items(sample.get("items", []))
-        return GEOSearchResult(
+        result = GEOSearchResult(
             source="sample_fallback",
             query=query,
             total_found=sample.get("total_found", len(items)),
             items=items,
         )
+        set_cached_search(
+            query=query,
+            species_filter=species_filter,
+            experiment_filter=experiment_filter,
+            state_filter=state_filter,
+            retmax=retmax,
+            retstart=retstart,
+            payload={
+                "source": result.source,
+                "query": result.query,
+                "total_found": result.total_found,
+                "items": result.items,
+            },
+        )
+        return result
 
 
 def write_geo_artifacts(
@@ -315,6 +363,7 @@ def write_geo_artifacts(
     experiment_filter: str = "All",
     state_filter: str = "All",
     only_analyzable: bool = False,
+    requested_retmax: int | None = None,
     returned_before_analyzable_filter: int | None = None,
 ) -> dict:
     raw_path.parent.mkdir(parents=True, exist_ok=True)
@@ -328,6 +377,7 @@ def write_geo_artifacts(
         "experiment_filter": experiment_filter,
         "state_filter": state_filter,
         "only_analyzable": only_analyzable,
+        "requested_retmax": requested_retmax if requested_retmax is not None else len(result.items),
         "returned_before_analyzable_filter": returned_before_analyzable_filter if returned_before_analyzable_filter is not None else len(result.items),
         "returned_after_analyzable_filter": len(result.items),
         "items": result.items,
@@ -365,6 +415,7 @@ def write_geo_artifacts(
         "experiment_filter": experiment_filter,
         "state_filter": state_filter,
         "only_analyzable": only_analyzable,
+        "requested_retmax": requested_retmax if requested_retmax is not None else len(result.items),
         "returned_before_analyzable_filter": returned_before_analyzable_filter if returned_before_analyzable_filter is not None else len(result.items),
         "returned_after_analyzable_filter": len(result.items),
     }
