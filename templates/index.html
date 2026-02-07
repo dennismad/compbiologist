@@ -172,12 +172,23 @@
             |log2FC| cutoff
             <input type="text" inputmode="decimal" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff if analysis else '1.0' }}" />
           </label>
+          <label>
+            Enrichment
+            {% set current_enrichment_mode = analysis.metadata.enrichment_mode if analysis and analysis.metadata.enrichment_mode else 'auto' %}
+            <select name="enrichment_mode">
+              {% for mode in enrichment_mode_options %}
+                <option value="{{ mode }}" {% if mode == current_enrichment_mode %}selected{% endif %}>
+                  {% if mode == 'auto' %}Auto (g:Profiler -> local){% elif mode == 'gprofiler' %}g:Profiler only{% elif mode == 'local' %}Local pathways only{% else %}{{ mode }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+          </label>
           <button type="submit" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Analysis</button>
         </form>
 
         {% if analysis %}
           <p class="note">
-            Mode: {{ analysis.metadata.mode }}{% if analysis.metadata.real_dataset_used %} | GEO matrix: {{ analysis.metadata.real_dataset_used }}{% endif %}{% if analysis.metadata.group_a_n and analysis.metadata.group_b_n %} | {{ analysis.metadata.group_a_name }} n={{ analysis.metadata.group_a_n }}, {{ analysis.metadata.group_b_name }} n={{ analysis.metadata.group_b_n }}{% endif %}
+            Mode: {{ analysis.metadata.mode }} | Enrichment: {{ analysis.metadata.enrichment_mode if analysis.metadata.enrichment_mode else 'auto' }}{% if analysis.metadata.real_dataset_used %} | GEO matrix: {{ analysis.metadata.real_dataset_used }}{% endif %}{% if analysis.metadata.group_a_n and analysis.metadata.group_b_n %} | {{ analysis.metadata.group_a_name }} n={{ analysis.metadata.group_a_n }}, {{ analysis.metadata.group_b_name }} n={{ analysis.metadata.group_b_n }}{% endif %}
           </p>
           {% if analysis.metadata.notes %}
             <p class="note">{{ analysis.metadata.notes|join(' ; ') }}</p>
@@ -188,6 +199,7 @@
               <input type="hidden" name="analysis_state" value="{{ analysis.metadata.state_profile }}" />
               <input type="hidden" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff }}" />
               <input type="hidden" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff }}" />
+              <input type="hidden" name="enrichment_mode" value="{{ analysis.metadata.enrichment_mode if analysis.metadata.enrichment_mode else 'auto' }}" />
               <input type="hidden" name="manual_gse" value="{{ analysis.group_choice.gse }}" />
 
               <p class="note">Dataset: {{ analysis.group_choice.gse }} | Source: {{ analysis.group_choice.source }}</p>

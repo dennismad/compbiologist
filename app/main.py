@@ -5,6 +5,7 @@ from pathlib import Path
 
 from flask import Flask, redirect, render_template, request, url_for
 
+from app.analysis import DEFAULT_ENRICHMENT_MODE, ENRICHMENT_MODE_OPTIONS
 from app.config import GEO_DEFAULT_FETCH_SIZE, GEO_DEFAULT_QUERY
 from app.geo import EXPERIMENT_TYPE_OPTIONS, STATE_FILTER_OPTIONS
 from app.pipeline import (
@@ -66,6 +67,7 @@ def create_app() -> Flask:
             geo_default_fetch_size=GEO_DEFAULT_FETCH_SIZE,
             experiment_type_options=EXPERIMENT_TYPE_OPTIONS,
             state_filter_options=STATE_FILTER_OPTIONS,
+            enrichment_mode_options=ENRICHMENT_MODE_OPTIONS,
             analysis=analysis_payload,
             protein_metadata=payload.get("metadata", {}),
         )
@@ -109,6 +111,7 @@ def create_app() -> Flask:
     @app.post("/analysis/run")
     def run_analysis():
         state_profile = request.form.get("analysis_state", "Disease vs Healthy").strip() or "Disease vs Healthy"
+        enrichment_mode = request.form.get("enrichment_mode", DEFAULT_ENRICHMENT_MODE).strip().lower()
         padj_raw = request.form.get("padj_cutoff", "0.05").strip()
         lfc_raw = request.form.get("log2fc_cutoff", "1.0").strip()
 
@@ -128,6 +131,7 @@ def create_app() -> Flask:
             state_profile=state_profile,
             padj_cutoff=padj_cutoff,
             log2fc_cutoff=log2fc_cutoff,
+            enrichment_mode=enrichment_mode,
             manual_choice=None,
         )
         return redirect(url_for("index"))
@@ -135,6 +139,7 @@ def create_app() -> Flask:
     @app.post("/analysis/run-manual")
     def run_analysis_manual():
         state_profile = request.form.get("analysis_state", "Disease vs Healthy").strip() or "Disease vs Healthy"
+        enrichment_mode = request.form.get("enrichment_mode", DEFAULT_ENRICHMENT_MODE).strip().lower()
         padj_raw = request.form.get("padj_cutoff", "0.05").strip()
         lfc_raw = request.form.get("log2fc_cutoff", "1.0").strip()
 
@@ -180,6 +185,7 @@ def create_app() -> Flask:
             state_profile=state_profile,
             padj_cutoff=padj_cutoff,
             log2fc_cutoff=log2fc_cutoff,
+            enrichment_mode=enrichment_mode,
             manual_choice=manual_choice,
         )
         return redirect(url_for("index"))

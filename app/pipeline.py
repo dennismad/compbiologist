@@ -188,6 +188,7 @@ def run_comparison_analysis(
     state_profile: str,
     padj_cutoff: float,
     log2fc_cutoff: float,
+    enrichment_mode: str = "auto",
     manual_choice: dict | None = None,
 ) -> dict:
     loaded = load_cached_loaded_geo_payload()
@@ -196,6 +197,7 @@ def run_comparison_analysis(
         loaded_items=loaded.get("items", []),
         padj_cutoff=padj_cutoff,
         log2fc_cutoff=log2fc_cutoff,
+        enrichment_mode=enrichment_mode,
         use_real_geo=True,
         manual_choice=manual_choice,
     )
