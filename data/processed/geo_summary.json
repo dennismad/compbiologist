@@ -1,0 +1,6 @@
+{
+  "query": "diabetes",
+  "source": "geo",
+  "returned": 15,
+  "total_found": 50513
+}

@@ -1,0 +1,34 @@
+{
+  "summary": {
+    "n_proteins": 250,
+    "avg_length": 784.7,
+    "median_length": 673,
+    "avg_annotation_score": 5.0,
+    "length_distribution": {
+      "1-300": 13,
+      "301-600": 96,
+      "601-900": 63,
+      "901-1200": 37,
+      "1201-2000": 35
+    },
+    "top_genes": {
+      "PIK3CD": 1,
+      "NOL9": 1,
+      "CAMK2G": 1,
+      "PDK2": 1,
+      "STK38": 1,
+      "PKN1": 1,
+      "AMHR2": 1,
+      "DGKD": 1,
+      "GUK1": 1,
+      "DGUOK": 1
+    }
+  },
+  "metadata": {
+    "last_updated_utc": "2026-02-07T20:13:22.643650+00:00",
+    "data_source": "uniprot",
+    "raw_file": "/Users/dennis/projects/compbiologist/data/raw/uniprot_kinase.tsv",
+    "processed_file": "/Users/dennis/projects/compbiologist/data/processed/processed_proteins.csv",
+    "bytes_written": 48344
+  }
+}

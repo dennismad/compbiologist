@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Virtual Computational Biologist</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+  <body>
+    <main class="container">
+      <header>
+        <h1>Virtual Computational Biologist</h1>
+        <p>Public protein data + GEO dataset discovery, local analysis, and web-based results.</p>
+        <form action="{{ url_for('refresh') }}" method="post">
+          <button type="submit">Refresh Protein Data</button>
+        </form>
+      </header>
+
+      <section class="panel">
+        <h2>GEO Search And Load</h2>
+        <form action="{{ url_for('geo_search') }}" method="post" class="inline-form">
+          <label>
+            Query
+            <input type="text" name="query" value="{{ geo_search_summary.query or geo_default_query }}" />
+          </label>
+          <label>
+            Species
+            <input type="text" name="species" placeholder="e.g. Homo sapiens" value="{{ geo_search_summary.species_filter }}" />
+          </label>
+          <label>
+            Experiment Type
+            <select name="experiment_type">
+              {% for exp_type in experiment_type_options %}
+                <option value="{{ exp_type }}" {% if exp_type == geo_search_summary.experiment_filter %}selected{% endif %}>{{ exp_type }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Count
+            <input type="number" name="retmax" min="1" max="100" value="{{ geo_default_fetch_size }}" />
+          </label>
+          <button type="submit">Search GEO</button>
+        </form>
+
+        <p class="note">
+          Source: {{ geo_search_summary.source }} | Query: {{ geo_search_summary.query or "none" }} |
+          Returned: {{ geo_search_summary.returned }} | Total found: {{ geo_search_summary.total_found }}
+        </p>
+
+        {% if geo_search_items %}
+          <form action="{{ url_for('geo_load_selected') }}" method="post">
+            <div class="table-action">
+              <button type="submit">Load Selected Datasets</button>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Select</th>
+                  <th>Accession</th>
+                  <th>Title</th>
+                  <th>Species</th>
+                  <th>Experiment</th>
+                  <th>Samples</th>
+                  <th>Links</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in geo_search_items %}
+                  {% set dataset_id = row.accession or row.uid %}
+                  <tr>
+                    <td><input type="checkbox" name="selected_ids" value="{{ dataset_id }}" /></td>
+                    <td>{{ dataset_id }}</td>
+                    <td>{{ row.title }}</td>
+                    <td>{{ row.organism }}</td>
+                    <td>{{ row.experiment_type }}</td>
+                    <td>{{ row.n_samples }}</td>
+                    <td class="link-list">
+                      {% if row.geo_link %}
+                        <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">GEO</a>
+                      {% endif %}
+                      {% if row.pubmed_link %}
+                        <a href="{{ row.pubmed_link }}" target="_blank" rel="noopener noreferrer">PubMed</a>
+                      {% endif %}
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </form>
+        {% else %}
+          <p class="note">No GEO search results yet. Run a GEO search, then select datasets to load.</p>
+        {% endif %}
+      </section>
+
+      {% if geo_loaded_summary.returned > 0 %}
+        <section class="panel">
+          <h2>Loaded GEO Datasets</h2>
+          <p class="note">
+            Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query }} |
+            Species filter: {{ geo_loaded_summary.species_filter or "none" }} |
+            Experiment filter: {{ geo_loaded_summary.experiment_filter }}
+          </p>
+          <table>
+            <thead>
+              <tr>
+                <th>Accession</th>
+                <th>Title</th>
+                <th>Species</th>
+                <th>Experiment</th>
+                <th>Samples</th>
+                <th>Links</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for row in geo_loaded_items %}
+                <tr>
+                  <td>{{ row.accession or row.uid }}</td>
+                  <td>{{ row.title }}</td>
+                  <td>{{ row.organism }}</td>
+                  <td>{{ row.experiment_type }}</td>
+                  <td>{{ row.n_samples }}</td>
+                  <td class="link-list">
+                    {% if row.geo_link %}
+                      <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">GEO</a>
+                    {% endif %}
+                    {% if row.pubmed_link %}
+                      <a href="{{ row.pubmed_link }}" target="_blank" rel="noopener noreferrer">PubMed</a>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </section>
+
+        <section class="panel">
+          <h2>Loaded GEO Organism Distribution</h2>
+          {% for label, count in geo_loaded_summary.organism_distribution.items() %}
+            <div class="bar-row">
+              <span class="bar-label">{{ label }}</span>
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (count / geo_organism_max * 100) if geo_organism_max else 0 }}%"></div>
+              </div>
+              <span class="bar-value">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </section>
+
+        <section class="panel">
+          <h2>Loaded GEO Experiment Types</h2>
+          {% for label, count in geo_loaded_summary.experiment_distribution.items() %}
+            <div class="bar-row">
+              <span class="bar-label">{{ label }}</span>
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (count / geo_experiment_max * 100) if geo_experiment_max else 0 }}%"></div>
+              </div>
+              <span class="bar-value">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </section>
+
+        <section class="panel">
+          <h2>Loaded GEO Samples Per Dataset</h2>
+          {% for label, count in geo_loaded_summary.sample_distribution.items() %}
+            <div class="bar-row">
+              <span class="bar-label">{{ label }}</span>
+              <div class="bar-track">
+                <div class="bar-fill" style="width: {{ (count / geo_sample_max * 100) if geo_sample_max else 0 }}%"></div>
+              </div>
+              <span class="bar-value">{{ count }}</span>
+            </div>
+          {% endfor %}
+        </section>
+      {% else %}
+        <section class="panel">
+          <h2>Loaded GEO Datasets</h2>
+          <p class="note">Details will appear here after you select GEO datasets and click "Load Selected Datasets".</p>
+        </section>
+      {% endif %}
+
+      <section class="cards">
+        <article class="card">
+          <h2>Proteins</h2>
+          <p>{{ summary.n_proteins }}</p>
+        </article>
+        <article class="card">
+          <h2>Avg Length</h2>
+          <p>{{ summary.avg_length }}</p>
+        </article>
+        <article class="card">
+          <h2>Median Length</h2>
+          <p>{{ summary.median_length }}</p>
+        </article>
+        <article class="card">
+          <h2>Avg Annotation</h2>
+          <p>{{ summary.avg_annotation_score }}</p>
+        </article>
+      </section>
+
+      <section class="panel">
+        <h2>Length Distribution</h2>
+        {% for label, count in summary.length_distribution.items() %}
+          <div class="bar-row">
+            <span class="bar-label">{{ label }}</span>
+            <div class="bar-track">
+              <div class="bar-fill" style="width: {{ (count / max_bin * 100) if max_bin else 0 }}%"></div>
+            </div>
+            <span class="bar-value">{{ count }}</span>
+          </div>
+        {% endfor %}
+      </section>
+
+      <section class="panel">
+        <h2>Top Gene Symbols</h2>
+        <table>
+          <thead>
+            <tr><th>Gene</th><th>Count</th></tr>
+          </thead>
+          <tbody>
+            {% for gene, count in summary.top_genes.items() %}
+              <tr><td>{{ gene }}</td><td>{{ count }}</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <section class="panel">
+        <h2>Protein Preview</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Accession</th>
+              <th>Protein</th>
+              <th>Gene</th>
+              <th>Length</th>
+              <th>Annotation</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in proteins %}
+              <tr>
+                <td>{{ row.accession }}</td>
+                <td>{{ row.protein_name }}</td>
+                <td>{{ row.gene_names }}</td>
+                <td>{{ row.length }}</td>
+                <td>{{ row.annotation_score }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+
+      <footer>
+        <p>Protein source: {{ metadata.data_source }} | Last updated (UTC): {{ metadata.last_updated_utc }}</p>
+      </footer>
+    </main>
+  </body>
+</html>

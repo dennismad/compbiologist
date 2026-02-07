@@ -1,0 +1,11 @@
+Entry	Entry Name	Protein names	Gene Names	Length	Annotation
+P00533	EGFR_HUMAN	Epidermal growth factor receptor	EGFR	1210	5
+P31749	AKT1_HUMAN	RAC-alpha serine/threonine-protein kinase	AKT1	480	5
+Q9Y243	AKT3_HUMAN	RAC-gamma serine/threonine-protein kinase	AKT3	479	5
+P27361	MAPK3_HUMAN	Mitogen-activated protein kinase 3	MAPK3	379	5
+P28482	MAPK1_HUMAN	Mitogen-activated protein kinase 1	MAPK1	361	5
+P42336	MTOR_HUMAN	Serine/threonine-protein kinase mTOR	MTOR	2549	5
+P15056	RAF1_HUMAN	RAF proto-oncogene serine/threonine-protein kinase	RAF1	648	5
+P04626	ERBB2_HUMAN	Receptor tyrosine-protein kinase erbB-2	ERBB2	1255	5
+P12931	SRC_HUMAN	Proto-oncogene tyrosine-protein kinase Src	SRC	536	5
+Q02750	MAP2K1_HUMAN	Dual specificity mitogen-activated protein kinase kinase 1	MAP2K1	393	5
