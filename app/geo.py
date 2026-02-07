@@ -79,19 +79,19 @@ def _infer_experiment_type(title: str, summary: str, gds_type: str) -> str:
 def _infer_state_profile(title: str, summary: str) -> str:
     text = f"{title} {summary}".lower()
     disease_tokens = ["disease", "patient", "tumor", "cancer", "diabetes", "case"]
-    healthy_tokens = ["healthy", "normal", "control", "wild type", "non-disease"]
+    healthy_tokens = ["healthy", "normal", "wild type", "non-disease"]
     treated_tokens = ["treated", "treatment", "drug", "therapy", "stimulated"]
-    untreated_tokens = ["untreated", "vehicle", "placebo", "mock", "baseline"]
+    untreated_tokens = ["untreated", "vehicle", "placebo", "mock", "baseline", "control"]
 
     has_disease = any(token in text for token in disease_tokens)
     has_healthy = any(token in text for token in healthy_tokens)
     has_treated = any(token in text for token in treated_tokens)
     has_untreated = any(token in text for token in untreated_tokens)
 
-    if has_disease and has_healthy:
-        return "Disease vs Healthy"
     if has_treated and has_untreated:
         return "Treated vs Untreated"
+    if has_disease and has_healthy:
+        return "Disease vs Healthy"
     if has_disease:
         return "Disease only"
     if has_healthy:
@@ -240,9 +240,9 @@ def _build_sqlite_where_clause(
 
     state = state_filter.strip()
     disease_tokens = ["disease", "patient", "tumor", "cancer", "diabetes", "case"]
-    healthy_tokens = ["healthy", "normal", "control", "wild type", "non-disease"]
+    healthy_tokens = ["healthy", "normal", "wild type", "non-disease"]
     treated_tokens = ["treated", "treatment", "drug", "therapy", "stimulated"]
-    untreated_tokens = ["untreated", "vehicle", "placebo", "mock", "baseline"]
+    untreated_tokens = ["untreated", "vehicle", "placebo", "mock", "baseline", "control"]
 
     if state == "Disease vs Healthy":
         c1, p1 = _sql_like_any(state_text_expr, disease_tokens)
@@ -413,10 +413,17 @@ def _search_geo_datasets_sqlite(
             }
         )
 
+    items = filter_geo_items(
+        items,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+    )
+
     return GEOSearchResult(
         source="geo_sqlite",
         query=query,
-        total_found=total_found,
+        total_found=max(len(items), total_found),
         items=items[:requested_retmax],
     )
 

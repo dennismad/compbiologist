@@ -27,7 +27,7 @@
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE232764",
       "pubmed_link": "https://pubmed.ncbi.nlm.nih.gov/38297352/",
       "analyzable": true,
-      "analyzable_detail": "fast_metadata_predicted"
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "GSE232175",
@@ -171,7 +171,7 @@
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE212690",
       "pubmed_link": "https://pubmed.ncbi.nlm.nih.gov/36269797/",
       "analyzable": true,
-      "analyzable_detail": "fast_metadata_predicted"
+      "analyzable_detail": "supplementary"
     },
     {
       "uid": "GSE126765",
@@ -188,24 +188,6 @@
       "state_profile": "Treated vs Untreated",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126765",
       "pubmed_link": "https://pubmed.ncbi.nlm.nih.gov/31570566/",
-      "analyzable": true,
-      "analyzable_detail": "fast_metadata_predicted"
-    },
-    {
-      "uid": "GSE166018",
-      "accession": "GSE166018",
-      "title": "FASN inhibition as a potential treatment for endocrine-resistant breast cancer",
-      "summary": "The aim of the experiment was to investigate the effect of TVB-3166 treatment in primary patient-derived breast tumor explants. RNA sequencing was performed in response to treatment with TVB-3166 or vehicle control. RNA sequencing analyses revealed that TVB significantly altered the mRNA expression of 219 genes as compared to the control.",
-      "organism": "Homo sapiens",
-      "n_samples": 4,
-      "gse": "GSE166018",
-      "pubmed_id": "33893909",
-      "pdat": "2022-12-24",
-      "gds_type": "Expression profiling by high throughput sequencing",
-      "experiment_type": "RNA-seq",
-      "state_profile": "Disease vs Healthy",
-      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE166018",
-      "pubmed_link": "https://pubmed.ncbi.nlm.nih.gov/33893909/",
       "analyzable": true,
       "analyzable_detail": "fast_metadata_predicted"
     },
@@ -368,6 +350,24 @@
       "state_profile": "Treated vs Untreated",
       "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE163067",
       "pubmed_link": "https://pubmed.ncbi.nlm.nih.gov/33968037/",
+      "analyzable": true,
+      "analyzable_detail": "fast_metadata_predicted"
+    },
+    {
+      "uid": "GSE179823",
+      "accession": "GSE179823",
+      "title": "Cut and Run ChIP-seq of SUZ12 and EZH2 in cadmium resistant breast cancer MDA-231 cells",
+      "summary": "In this study we compared genome wide SUZ12 and EZH2 Cut&RUN CHIP-seq of cadmium resistant MDA-231 breast cancer cells vs untreated controls.",
+      "organism": "Homo sapiens",
+      "n_samples": 8,
+      "gse": "GSE179823",
+      "pubmed_id": "",
+      "pdat": "2021-07-13",
+      "gds_type": "Genome binding/occupancy profiling by high throughput sequencing",
+      "experiment_type": "RNA-seq",
+      "state_profile": "Disease vs Healthy",
+      "geo_link": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE179823",
+      "pubmed_link": "",
       "analyzable": true,
       "analyzable_detail": "fast_metadata_predicted"
     }

@@ -72,6 +72,14 @@ def test_filter_geo_items_state():
     assert filtered[0]["accession"] == "GSE10"
 
 
+def test_infer_state_profile_prioritizes_treated_over_disease_healthy():
+    state = geo._infer_state_profile(
+        "Diabetes patients treated with metformin and healthy control baseline",
+        "",
+    )
+    assert state == "Treated vs Untreated"
+
+
 def test_build_geo_insights_distributions():
     items = [
         {"organism": "Homo sapiens", "n_samples": 8, "experiment_type": "Single-cell RNA-seq"},
@@ -155,3 +163,45 @@ def test_search_geo_datasets_uses_local_sqlite(monkeypatch, tmp_path):
     assert result.total_found == 1
     assert len(result.items) == 1
     assert result.items[0]["accession"] == "GSEX1"
+
+
+def test_sqlite_state_filter_returns_only_matching_inferred_state(monkeypatch, tmp_path):
+    db_path = tmp_path / "GEOmetadb.sqlite"
+    with sqlite3.connect(str(db_path)) as conn:
+        conn.executescript(
+            """
+            CREATE TABLE gse (
+              ID REAL,
+              title TEXT,
+              gse TEXT,
+              status TEXT,
+              submission_date TEXT,
+              last_update_date TEXT,
+              pubmed_id INTEGER,
+              summary TEXT,
+              type TEXT
+            );
+            CREATE TABLE gse_gsm (gse TEXT, gsm TEXT);
+            CREATE TABLE gsm (ID REAL, title TEXT, gsm TEXT, organism_ch1 TEXT);
+
+            INSERT INTO gse (ID, title, gse, last_update_date, pubmed_id, summary, type)
+              VALUES (1, 'Diabetes patient and healthy control cohort', 'GSEX_DH', '2024-01-03', 11111, 'disease vs healthy', 'Expression profiling by high throughput sequencing');
+            INSERT INTO gse (ID, title, gse, last_update_date, pubmed_id, summary, type)
+              VALUES (2, 'Diabetes treated cohort with healthy controls', 'GSEX_TU', '2024-01-02', 22222, 'treated baseline intervention', 'Expression profiling by high throughput sequencing');
+            """
+        )
+        conn.commit()
+
+    monkeypatch.setattr(geo, "GEO_SQLITE_PATH", db_path)
+    monkeypatch.setattr(geo, "get_cached_search", lambda **kwargs: None)
+
+    result = geo.search_geo_datasets(
+        query="diabetes",
+        retmax=20,
+        state_filter="Disease vs Healthy",
+        experiment_filter="All",
+    )
+
+    assert result.source == "geo_sqlite"
+    assert len(result.items) >= 1
+    assert all(item.get("state_profile") == "Disease vs Healthy" for item in result.items)
