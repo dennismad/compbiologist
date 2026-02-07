@@ -225,6 +225,7 @@ def load_cached_geo_payload() -> dict:
         return {
             "query": "",
             "source": "not_fetched",
+            "error": "",
             "total_found": 0,
             "species_filter": "",
             "experiment_filter": "All",

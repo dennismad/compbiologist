@@ -14,6 +14,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 # Optional but recommended for faster/higher-rate NCBI calls:
 export NCBI_API_KEY="your_ncbi_api_key"
+export NCBI_EMAIL="your_email@example.com"
 python -m app.main
 ```
 

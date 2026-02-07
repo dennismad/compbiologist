@@ -42,6 +42,7 @@ def create_app() -> Flask:
             geo_search_summary={
                 "query": geo_search_payload.get("query", ""),
                 "source": geo_search_payload.get("source", "not_fetched"),
+                "error": geo_search_payload.get("error", ""),
                 "total_found": geo_search_payload.get("total_found", 0),
                 "returned": len(geo_search_payload.get("items", [])),
                 "requested_retmax": geo_search_payload.get("requested_retmax", GEO_DEFAULT_FETCH_SIZE),

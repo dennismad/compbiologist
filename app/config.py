@@ -27,5 +27,6 @@ DEFAULT_FETCH_SIZE = 250
 GEO_ESEARCH_ENDPOINT = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 GEO_ESUMMARY_ENDPOINT = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 GEO_NCBI_API_KEY = os.getenv("NCBI_API_KEY", "").strip()
+GEO_NCBI_EMAIL = os.getenv("NCBI_EMAIL", "").strip()
 GEO_DEFAULT_QUERY = "single cell breast cancer"
 GEO_DEFAULT_FETCH_SIZE = 15

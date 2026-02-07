@@ -59,6 +59,9 @@
         </p>
         {% if geo_search_summary.source == "geo_error" %}
           <p class="note">GEO API request failed. Check network/API limits and rerun search.</p>
+          {% if geo_search_summary.error %}
+            <p class="note">Error detail: {{ geo_search_summary.error }}</p>
+          {% endif %}
         {% endif %}
 
         {% if geo_search_items %}

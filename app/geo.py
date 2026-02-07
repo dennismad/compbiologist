@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import time
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -13,6 +14,7 @@ from app.config import (
     GEO_ESEARCH_ENDPOINT,
     GEO_ESUMMARY_ENDPOINT,
     GEO_NCBI_API_KEY,
+    GEO_NCBI_EMAIL,
 )
 from app.geo_cache import get_cached_search, set_cached_search
 
@@ -41,6 +43,7 @@ class GEOSearchResult:
     query: str
     total_found: int
     items: list[dict]
+    error: str = ""
 
 
 def _build_geo_link(accession: str) -> str:
@@ -113,6 +116,29 @@ def _build_geo_term(query: str, species_filter: str, experiment_filter: str) -> 
     if experiment_term:
         term = f"({term}) AND {experiment_term}"
     return term
+
+
+def _geo_common_params() -> dict[str, str]:
+    params = {"tool": "compbiologist_app"}
+    if GEO_NCBI_EMAIL:
+        params["email"] = GEO_NCBI_EMAIL
+    if GEO_NCBI_API_KEY:
+        params["api_key"] = GEO_NCBI_API_KEY
+    return params
+
+
+def _get_json_with_retries(url: str, params: dict, timeout: int = 25, attempts: int = 3) -> dict:
+    last_error: Exception | None = None
+    for i in range(attempts):
+        try:
+            resp = requests.get(url, params=params, timeout=timeout, headers={"User-Agent": "compbiologist/1.0"})
+            resp.raise_for_status()
+            return resp.json()
+        except Exception as exc:
+            last_error = exc
+            if i < attempts - 1:
+                time.sleep(0.5 * (2**i))
+    raise RuntimeError(str(last_error) if last_error else "GEO request failed")
 
 
 def _parse_geo_summary_payload(payload: dict, id_list: list[str]) -> list[dict]:
@@ -266,6 +292,7 @@ def search_geo_datasets(
             query=str(cached.get("query", query)),
             total_found=int(cached.get("total_found", 0)),
             items=list(cached.get("items", [])),
+            error=str(cached.get("error", "")),
         )
 
     geo_term = _build_geo_term(query, species_filter=species_filter, experiment_filter=experiment_filter)
@@ -283,13 +310,10 @@ def search_geo_datasets(
         "retstart": max(0, int(retstart)),
         "sort": "relevance",
     }
-    if GEO_NCBI_API_KEY:
-        esearch_params["api_key"] = GEO_NCBI_API_KEY
+    esearch_params.update(_geo_common_params())
 
     try:
-        esearch_resp = requests.get(GEO_ESEARCH_ENDPOINT, params=esearch_params, timeout=20)
-        esearch_resp.raise_for_status()
-        esearch_data = esearch_resp.json()
+        esearch_data = _get_json_with_retries(GEO_ESEARCH_ENDPOINT, esearch_params, timeout=25, attempts=3)
 
         search_result = esearch_data.get("esearchresult", {})
         id_list = search_result.get("idlist", [])
@@ -303,11 +327,8 @@ def search_geo_datasets(
             "id": ",".join(id_list),
             "retmode": "json",
         }
-        if GEO_NCBI_API_KEY:
-            esummary_params["api_key"] = GEO_NCBI_API_KEY
-        esummary_resp = requests.get(GEO_ESUMMARY_ENDPOINT, params=esummary_params, timeout=20)
-        esummary_resp.raise_for_status()
-        esummary_data = esummary_resp.json()
+        esummary_params.update(_geo_common_params())
+        esummary_data = _get_json_with_retries(GEO_ESUMMARY_ENDPOINT, esummary_params, timeout=25, attempts=3)
 
         items = _parse_geo_summary_payload(esummary_data, id_list)
         items = filter_geo_items(
@@ -329,16 +350,18 @@ def search_geo_datasets(
                 "query": query,
                 "total_found": total_found,
                 "items": items,
+                "error": "",
             },
         )
         return GEOSearchResult(source="geo", query=query, total_found=total_found, items=items)
-    except Exception:
+    except Exception as exc:
         # Keep failures explicit instead of silently returning mismatched sample data.
         return GEOSearchResult(
             source="geo_error",
             query=query,
             total_found=0,
             items=[],
+            error=str(exc),
         )
 
 
@@ -360,6 +383,7 @@ def write_geo_artifacts(
     raw_payload = {
         "query": result.query,
         "source": result.source,
+        "error": result.error,
         "total_found": result.total_found,
         "species_filter": species_filter,
         "experiment_filter": experiment_filter,
@@ -397,6 +421,7 @@ def write_geo_artifacts(
     summary = {
         "query": result.query,
         "source": result.source,
+        "error": result.error,
         "returned": len(result.items),
         "total_found": result.total_found,
         "species_filter": species_filter,

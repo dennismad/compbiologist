@@ -1,4 +1,1 @@
-accession,title,organism,experiment_type,state_profile,analyzable,analyzable_detail,n_samples,gse,pubmed_id,pdat,summary
-GSE2109,Expression profiling of human cancers,Homo sapiens,Other,Disease only,True,series_matrix,2158,GSE2109,17545524,2007/06/01,Gene expression survey across multiple cancer types.
-GSE75688,Single-cell RNA-seq of primary breast cancer,Homo sapiens,Single-cell RNA-seq,Disease only,True,supplementary,549,GSE75688,27166986,2016/05/01,Single-cell transcriptomes from breast tumor cells and microenvironment.
-GSE118389,Single-cell RNA-seq of triple negative breast cancer,Homo sapiens,Single-cell RNA-seq,Disease only,True,supplementary,1536,GSE118389,30254104,2018/09/01,Single-cell atlas of triple negative breast cancer samples.
+
