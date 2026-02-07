@@ -25,6 +25,14 @@ EXPERIMENT_TYPE_OPTIONS = [
     "Other",
 ]
 
+STATE_FILTER_OPTIONS = [
+    "All",
+    "Disease only",
+    "Healthy only",
+    "Disease vs Healthy",
+    "Treated vs Untreated",
+]
+
 
 @dataclass
 class GEOSearchResult:
@@ -61,6 +69,51 @@ def _infer_experiment_type(title: str, summary: str, gds_type: str) -> str:
     return "Other"
 
 
+def _infer_state_profile(title: str, summary: str) -> str:
+    text = f"{title} {summary}".lower()
+    disease_tokens = ["disease", "patient", "tumor", "cancer", "diabetes", "case"]
+    healthy_tokens = ["healthy", "normal", "control", "wild type", "non-disease"]
+    treated_tokens = ["treated", "treatment", "drug", "therapy", "stimulated"]
+    untreated_tokens = ["untreated", "vehicle", "placebo", "mock", "baseline"]
+
+    has_disease = any(token in text for token in disease_tokens)
+    has_healthy = any(token in text for token in healthy_tokens)
+    has_treated = any(token in text for token in treated_tokens)
+    has_untreated = any(token in text for token in untreated_tokens)
+
+    if has_disease and has_healthy:
+        return "Disease vs Healthy"
+    if has_treated and has_untreated:
+        return "Treated vs Untreated"
+    if has_disease:
+        return "Disease only"
+    if has_healthy:
+        return "Healthy only"
+    return "Unclear"
+
+
+def _build_experiment_term(experiment_filter: str) -> str:
+    mapping = {
+        "Single-cell RNA-seq": "(\"single cell\"[All Fields] OR \"single-cell\"[All Fields] OR scrna[All Fields] OR snrna[All Fields])",
+        "RNA-seq": "(\"rna seq\"[All Fields] OR \"rna-seq\"[All Fields] OR rnaseq[All Fields] OR \"transcriptome sequencing\"[All Fields])",
+        "Microarray": "(microarray[All Fields] OR \"expression profiling by array\"[All Fields])",
+        "ChIP-seq": "(\"chip-seq\"[All Fields] OR chipseq[All Fields])",
+        "ATAC-seq": "(\"atac-seq\"[All Fields] OR atacseq[All Fields])",
+    }
+    return mapping.get(experiment_filter, "")
+
+
+def _build_geo_term(query: str, species_filter: str, experiment_filter: str) -> str:
+    term = query.strip() or GEO_DEFAULT_QUERY
+    if species_filter.strip():
+        species = species_filter.strip()
+        term = f"({term}) AND ({species}[Organism] OR {species}[All Fields])"
+    experiment_term = _build_experiment_term(experiment_filter.strip())
+    if experiment_term:
+        term = f"({term}) AND {experiment_term}"
+    return term
+
+
 def _parse_geo_summary_payload(payload: dict, id_list: list[str]) -> list[dict]:
     result = payload.get("result", {})
     items: list[dict] = []
@@ -83,6 +136,7 @@ def _parse_geo_summary_payload(payload: dict, id_list: list[str]) -> list[dict]:
                 "pdat": row.get("pdat", ""),
                 "gds_type": gds_type,
                 "experiment_type": _infer_experiment_type(title, summary, gds_type),
+                "state_profile": _infer_state_profile(title, summary),
             }
         )
 
@@ -103,11 +157,21 @@ def enrich_geo_items(items: list[dict]) -> list[dict]:
                 str(row_copy.get("summary", "")),
                 str(row_copy.get("gds_type", "")),
             )
+        if not row_copy.get("state_profile"):
+            row_copy["state_profile"] = _infer_state_profile(
+                str(row_copy.get("title", "")),
+                str(row_copy.get("summary", "")),
+            )
         enriched.append(row_copy)
     return enriched
 
 
-def filter_geo_items(items: list[dict], species_filter: str = "", experiment_filter: str = "All") -> list[dict]:
+def filter_geo_items(
+    items: list[dict],
+    species_filter: str = "",
+    experiment_filter: str = "All",
+    state_filter: str = "All",
+) -> list[dict]:
     species_filter = species_filter.strip().lower()
     experiment_filter = experiment_filter.strip()
 
@@ -115,11 +179,13 @@ def filter_geo_items(items: list[dict], species_filter: str = "", experiment_fil
     for row in items:
         organism = str(row.get("organism", "")).lower()
         experiment_type = str(row.get("experiment_type", "Other"))
+        state_profile = str(row.get("state_profile", "Unclear"))
 
         species_ok = not species_filter or species_filter in organism
         exp_ok = experiment_filter in ("", "All") or experiment_type == experiment_filter
+        state_ok = state_filter in ("", "All") or state_profile == state_filter
 
-        if species_ok and exp_ok:
+        if species_ok and exp_ok and state_ok:
             filtered.append(row)
 
     return filtered
@@ -176,13 +242,26 @@ def build_geo_insights(items: list[dict]) -> dict:
     }
 
 
-def search_geo_datasets(query: str = GEO_DEFAULT_QUERY, retmax: int = GEO_DEFAULT_FETCH_SIZE) -> GEOSearchResult:
+def search_geo_datasets(
+    query: str = GEO_DEFAULT_QUERY,
+    retmax: int = GEO_DEFAULT_FETCH_SIZE,
+    species_filter: str = "",
+    experiment_filter: str = "All",
+    state_filter: str = "All",
+) -> GEOSearchResult:
     """Search GEO datasets (GDS) via NCBI E-utilities and return normalized records."""
+    geo_term = _build_geo_term(query, species_filter=species_filter, experiment_filter=experiment_filter)
+    requested_retmax = max(1, retmax)
+    fetch_retmax = requested_retmax
+    if species_filter.strip() or experiment_filter.strip() not in ("", "All"):
+        # Fetch a broader window before local filtering so filtered results are less likely to be empty.
+        fetch_retmax = min(1000, max(requested_retmax * 5, requested_retmax))
+
     esearch_params = {
         "db": "gds",
-        "term": query,
+        "term": geo_term,
         "retmode": "json",
-        "retmax": retmax,
+        "retmax": fetch_retmax,
         "sort": "relevance",
     }
 
@@ -208,6 +287,13 @@ def search_geo_datasets(query: str = GEO_DEFAULT_QUERY, retmax: int = GEO_DEFAUL
         esummary_data = esummary_resp.json()
 
         items = _parse_geo_summary_payload(esummary_data, id_list)
+        items = filter_geo_items(
+            items,
+            species_filter=species_filter,
+            experiment_filter=experiment_filter,
+            state_filter=state_filter,
+        )
+        items = items[:requested_retmax]
         return GEOSearchResult(source="geo", query=query, total_found=total_found, items=items)
     except Exception:
         sample = json.loads(GEO_SAMPLE_PATH.read_text(encoding="utf-8"))
@@ -220,7 +306,15 @@ def search_geo_datasets(query: str = GEO_DEFAULT_QUERY, retmax: int = GEO_DEFAUL
         )
 
 
-def write_geo_artifacts(raw_path: Path, processed_path: Path, summary_path: Path, result: GEOSearchResult, species_filter: str = "", experiment_filter: str = "All") -> dict:
+def write_geo_artifacts(
+    raw_path: Path,
+    processed_path: Path,
+    summary_path: Path,
+    result: GEOSearchResult,
+    species_filter: str = "",
+    experiment_filter: str = "All",
+    state_filter: str = "All",
+) -> dict:
     raw_path.parent.mkdir(parents=True, exist_ok=True)
     processed_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -230,6 +324,7 @@ def write_geo_artifacts(raw_path: Path, processed_path: Path, summary_path: Path
         "total_found": result.total_found,
         "species_filter": species_filter,
         "experiment_filter": experiment_filter,
+        "state_filter": state_filter,
         "items": result.items,
     }
     raw_path.write_text(json.dumps(raw_payload, indent=2), encoding="utf-8")
@@ -241,6 +336,7 @@ def write_geo_artifacts(raw_path: Path, processed_path: Path, summary_path: Path
             "title",
             "organism",
             "experiment_type",
+            "state_profile",
             "n_samples",
             "gse",
             "pubmed_id",
@@ -260,6 +356,7 @@ def write_geo_artifacts(raw_path: Path, processed_path: Path, summary_path: Path
         "total_found": result.total_found,
         "species_filter": species_filter,
         "experiment_filter": experiment_filter,
+        "state_filter": state_filter,
     }
     summary_path.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
@@ -284,6 +381,7 @@ def save_loaded_geo_selection(loaded_json_path: Path, loaded_csv_path: Path, sou
         "source": source_payload.get("source", "not_fetched"),
         "species_filter": source_payload.get("species_filter", ""),
         "experiment_filter": source_payload.get("experiment_filter", "All"),
+        "state_filter": source_payload.get("state_filter", "All"),
         "returned": len(loaded_items),
         "selected_ids": sorted(selected),
         "items": loaded_items,
@@ -297,6 +395,7 @@ def save_loaded_geo_selection(loaded_json_path: Path, loaded_csv_path: Path, sou
             "title",
             "organism",
             "experiment_type",
+            "state_profile",
             "n_samples",
             "gse",
             "pubmed_id",

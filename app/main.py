@@ -6,7 +6,7 @@ from pathlib import Path
 from flask import Flask, redirect, render_template, request, url_for
 
 from app.config import GEO_DEFAULT_FETCH_SIZE, GEO_DEFAULT_QUERY
-from app.geo import EXPERIMENT_TYPE_OPTIONS
+from app.geo import EXPERIMENT_TYPE_OPTIONS, STATE_FILTER_OPTIONS
 from app.pipeline import (
     load_cached_geo_payload,
     load_cached_loaded_geo_payload,
@@ -53,6 +53,7 @@ def create_app() -> Flask:
                 "returned": len(geo_search_payload.get("items", [])),
                 "species_filter": geo_search_payload.get("species_filter", ""),
                 "experiment_filter": geo_search_payload.get("experiment_filter", "All"),
+                "state_filter": geo_search_payload.get("state_filter", "All"),
             },
             geo_search_items=geo_search_payload.get("items", [])[:50],
             geo_loaded_summary={
@@ -61,6 +62,7 @@ def create_app() -> Flask:
                 "returned": geo_loaded_payload.get("returned", 0),
                 "species_filter": geo_loaded_payload.get("species_filter", ""),
                 "experiment_filter": geo_loaded_payload.get("experiment_filter", "All"),
+                "state_filter": geo_loaded_payload.get("state_filter", "All"),
                 "organism_distribution": geo_loaded_payload.get("insights", {}).get("organism_distribution", {}),
                 "sample_distribution": geo_loaded_payload.get("insights", {}).get("sample_distribution", {}),
                 "experiment_distribution": geo_loaded_payload.get("insights", {}).get("experiment_distribution", {}),
@@ -72,6 +74,7 @@ def create_app() -> Flask:
             geo_default_query=GEO_DEFAULT_QUERY,
             geo_default_fetch_size=GEO_DEFAULT_FETCH_SIZE,
             experiment_type_options=EXPERIMENT_TYPE_OPTIONS,
+            state_filter_options=STATE_FILTER_OPTIONS,
         )
 
     @app.post("/refresh")
@@ -84,6 +87,7 @@ def create_app() -> Flask:
         query = request.form.get("query", "").strip() or GEO_DEFAULT_QUERY
         species_filter = request.form.get("species", "").strip()
         experiment_filter = request.form.get("experiment_type", "All").strip() or "All"
+        state_filter = request.form.get("state_filter", "All").strip() or "All"
 
         retmax_raw = request.form.get("retmax", str(GEO_DEFAULT_FETCH_SIZE)).strip()
         try:
@@ -97,6 +101,7 @@ def create_app() -> Flask:
             retmax=retmax,
             species_filter=species_filter,
             experiment_filter=experiment_filter,
+            state_filter=state_filter,
         )
         return redirect(url_for("index"))
 

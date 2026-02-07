@@ -18,7 +18,6 @@ from app.geo import (
     GEOSearchResult,
     build_geo_insights,
     enrich_geo_items,
-    filter_geo_items,
     load_cached_geo,
     load_cached_loaded_geo,
     save_loaded_geo_selection,
@@ -58,10 +57,21 @@ def run_pipeline() -> dict:
     return payload
 
 
-def run_geo_pipeline(query: str, retmax: int, species_filter: str = "", experiment_filter: str = "All") -> dict:
-    result = search_geo_datasets(query=query, retmax=retmax)
-    enriched_items = enrich_geo_items(result.items)
-    filtered_items = filter_geo_items(enriched_items, species_filter=species_filter, experiment_filter=experiment_filter)
+def run_geo_pipeline(
+    query: str,
+    retmax: int,
+    species_filter: str = "",
+    experiment_filter: str = "All",
+    state_filter: str = "All",
+) -> dict:
+    result = search_geo_datasets(
+        query=query,
+        retmax=retmax,
+        species_filter=species_filter,
+        experiment_filter=experiment_filter,
+        state_filter=state_filter,
+    )
+    filtered_items = enrich_geo_items(result.items)
 
     filtered_result = GEOSearchResult(
         source=result.source,
@@ -77,6 +87,7 @@ def run_geo_pipeline(query: str, retmax: int, species_filter: str = "", experime
         result=filtered_result,
         species_filter=species_filter,
         experiment_filter=experiment_filter,
+        state_filter=state_filter,
     )
     return {
         "summary": summary,
@@ -119,6 +130,7 @@ def load_cached_geo_payload() -> dict:
             "total_found": 0,
             "species_filter": "",
             "experiment_filter": "All",
+            "state_filter": "All",
             "items": [],
             "insights": {
                 "organism_distribution": {},
@@ -140,6 +152,7 @@ def load_cached_loaded_geo_payload() -> dict:
             "source": "not_loaded",
             "species_filter": "",
             "experiment_filter": "All",
+            "state_filter": "All",
             "returned": 0,
             "selected_ids": [],
             "items": [],

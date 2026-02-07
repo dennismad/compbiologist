@@ -46,6 +46,28 @@ def test_filter_geo_items_species_and_experiment():
     assert filtered_experiment[0]["accession"] == "GSE2"
 
 
+def test_filter_geo_items_state():
+    items = enrich_geo_items(
+        [
+            {
+                "accession": "GSE10",
+                "title": "Diabetes patient and healthy control cohort",
+                "summary": "",
+                "organism": "Homo sapiens",
+            },
+            {
+                "accession": "GSE11",
+                "title": "Cancer patient biopsy only",
+                "summary": "",
+                "organism": "Homo sapiens",
+            },
+        ]
+    )
+    filtered = filter_geo_items(items, state_filter="Disease vs Healthy")
+    assert len(filtered) == 1
+    assert filtered[0]["accession"] == "GSE10"
+
+
 def test_build_geo_insights_distributions():
     items = [
         {"organism": "Homo sapiens", "n_samples": 8, "experiment_type": "Single-cell RNA-seq"},

@@ -2,5 +2,7 @@
   "query": "diabetes",
   "source": "geo",
   "returned": 15,
-  "total_found": 50513
+  "total_found": 1202,
+  "species_filter": "Homo sapiens",
+  "experiment_filter": "RNA-seq"
 }

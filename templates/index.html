@@ -36,6 +36,14 @@
             </select>
           </label>
           <label>
+            State Filter
+            <select name="state_filter">
+              {% for state_option in state_filter_options %}
+                <option value="{{ state_option }}" {% if state_option == geo_search_summary.state_filter %}selected{% endif %}>{{ state_option }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
             Count
             <input type="number" name="retmax" min="1" max="100" value="{{ geo_default_fetch_size }}" />
           </label>
@@ -60,6 +68,7 @@
                   <th>Title</th>
                   <th>Species</th>
                   <th>Experiment</th>
+                  <th>State</th>
                   <th>Samples</th>
                   <th>Links</th>
                 </tr>
@@ -73,6 +82,7 @@
                     <td>{{ row.title }}</td>
                     <td>{{ row.organism }}</td>
                     <td>{{ row.experiment_type }}</td>
+                    <td>{{ row.state_profile }}</td>
                     <td>{{ row.n_samples }}</td>
                     <td class="link-list">
                       {% if row.geo_link %}
@@ -98,7 +108,8 @@
           <p class="note">
             Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query }} |
             Species filter: {{ geo_loaded_summary.species_filter or "none" }} |
-            Experiment filter: {{ geo_loaded_summary.experiment_filter }}
+            Experiment filter: {{ geo_loaded_summary.experiment_filter }} |
+            State filter: {{ geo_loaded_summary.state_filter }}
           </p>
           <table>
             <thead>
@@ -107,6 +118,7 @@
                 <th>Title</th>
                 <th>Species</th>
                 <th>Experiment</th>
+                <th>State</th>
                 <th>Samples</th>
                 <th>Links</th>
               </tr>
@@ -118,6 +130,7 @@
                   <td>{{ row.title }}</td>
                   <td>{{ row.organism }}</td>
                   <td>{{ row.experiment_type }}</td>
+                  <td>{{ row.state_profile }}</td>
                   <td>{{ row.n_samples }}</td>
                   <td class="link-list">
                     {% if row.geo_link %}
