@@ -2,13 +2,13 @@
   "query": "diabetes",
   "source": "geo_sqlite",
   "error": "",
-  "returned": 10,
-  "total_found": 10,
+  "returned": 20,
+  "total_found": 61,
   "species_filter": "Homo sapiens",
   "experiment_filter": "RNA-seq",
-  "state_filter": "Treated vs Untreated",
+  "state_filter": "Disease vs Healthy",
   "only_analyzable": true,
-  "requested_retmax": 100,
-  "returned_before_analyzable_filter": 10,
-  "returned_after_analyzable_filter": 10
+  "requested_retmax": 20,
+  "returned_before_analyzable_filter": 60,
+  "returned_after_analyzable_filter": 20
 }

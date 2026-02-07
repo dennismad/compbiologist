@@ -199,28 +199,32 @@ def _build_sqlite_where_clause(
     species = species_filter.strip().lower()
     if species:
         clauses.append(
-            """EXISTS (
-                SELECT 1
+            """g.gse IN (
+                SELECT DISTINCT gg.gse
                 FROM gse_gsm gg
                 JOIN gsm s ON gg.gsm = s.gsm
-                WHERE gg.gse = g.gse
-                  AND lower(ifnull(s.organism_ch1,'')) LIKE ?
+                WHERE lower(ifnull(s.organism_ch1,'')) LIKE ?
             )"""
         )
         params.append(f"%{species}%")
 
-    gse_text_expr = "lower(g.title || ' ' || ifnull(g.summary,'') || ' ' || ifnull(g.type,''))"
-    state_text_expr = "lower(g.title || ' ' || ifnull(g.summary,''))"
+    # Limit summary scan window for better latency and less noisy long-tail matches.
+    gse_text_expr = "lower(g.title || ' ' || ifnull(substr(g.summary,1,1200),'') || ' ' || ifnull(g.type,''))"
+    state_text_expr = "lower(g.title || ' ' || ifnull(substr(g.summary,1,1200),''))"
 
     exp = experiment_filter.strip()
+    single_cell_tokens = ["single cell", "single-cell", "scrna", "snrna", "single-cell rna", "single cell rna"]
+    rna_tokens = ["rna-seq", "rnaseq", "rna seq", "transcriptome sequencing", "high throughput sequencing"]
+
     if exp == "Single-cell RNA-seq":
-        clause, p = _sql_like_any(gse_text_expr, ["single cell", "single-cell", "scrna", "snrna"])
+        clause, p = _sql_like_any(gse_text_expr, single_cell_tokens)
         clauses.append(clause)
         params.extend(p)
     elif exp == "RNA-seq":
-        clause, p = _sql_like_any(gse_text_expr, ["rna-seq", "rnaseq", "high throughput sequencing", "transcriptome sequencing"])
-        clauses.append(clause)
-        params.extend(p)
+        c_rna, p_rna = _sql_like_any(gse_text_expr, rna_tokens)
+        c_sc, p_sc = _sql_like_any(gse_text_expr, single_cell_tokens)
+        clauses.append(f"({c_rna} AND NOT {c_sc})")
+        params.extend(p_rna + p_sc)
     elif exp == "Microarray":
         clause, p = _sql_like_any(gse_text_expr, ["microarray", "expression profiling by array"])
         clauses.append(clause)
@@ -273,64 +277,114 @@ def _search_geo_datasets_sqlite(
 ) -> GEOSearchResult:
     requested_retmax = max(1, int(retmax))
     fetch_retmax = requested_retmax
+    query_text = (query or GEO_DEFAULT_QUERY).strip().lower()
+    title_pattern = f"%{query_text}%" if query_text else "%"
 
     where_sql, where_params = _build_sqlite_where_clause(
         query=query,
-        species_filter=species_filter,
+        species_filter="",
         experiment_filter=experiment_filter,
         state_filter=state_filter,
     )
     offset = max(0, int(retstart))
+    species = species_filter.strip().lower()
 
-    with sqlite3.connect(str(GEO_SQLITE_PATH)) as conn:
-        conn.row_factory = sqlite3.Row
-        total_found = int(
-            conn.execute(
-                f"SELECT COUNT(*) AS n FROM gse g WHERE {where_sql}",
-                where_params,
-            ).fetchone()["n"]
-        )
-
+    def _fetch_species_map(conn: sqlite3.Connection, accessions: list[str]) -> dict[str, tuple[str, int]]:
+        if not accessions:
+            return {}
+        placeholders = ",".join(["?"] * len(accessions))
         rows = conn.execute(
             f"""
             SELECT
-              g.gse AS accession,
-              g.title AS title,
-              g.summary AS summary,
-              g.pubmed_id AS pubmed_id,
-              g.last_update_date AS pdat,
-              g.type AS gds_type,
-              COALESCE((
-                SELECT group_concat(DISTINCT s.organism_ch1)
-                FROM gse_gsm gg
-                JOIN gsm s ON gg.gsm = s.gsm
-                WHERE gg.gse = g.gse
-                  AND s.organism_ch1 IS NOT NULL
-                  AND s.organism_ch1 <> ''
-              ), '') AS organism,
-              COALESCE((
-                SELECT COUNT(DISTINCT gg.gsm)
-                FROM gse_gsm gg
-                WHERE gg.gse = g.gse
-              ), 0) AS n_samples
-            FROM gse g
-            WHERE {where_sql}
-            ORDER BY g.last_update_date DESC, g.gse DESC
-            LIMIT ? OFFSET ?
+              gg.gse AS accession,
+              group_concat(DISTINCT s.organism_ch1) AS organism,
+              COUNT(DISTINCT gg.gsm) AS n_samples
+            FROM gse_gsm gg
+            LEFT JOIN gsm s ON gg.gsm = s.gsm
+            WHERE gg.gse IN ({placeholders})
+            GROUP BY gg.gse
             """,
-            [*where_params, fetch_retmax, offset],
+            accessions,
         ).fetchall()
+        out: dict[str, tuple[str, int]] = {}
+        for r in rows:
+            acc = str(r["accession"] or "")
+            out[acc] = (str(r["organism"] or ""), int(r["n_samples"] or 0))
+        return out
+
+    with sqlite3.connect(str(GEO_SQLITE_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        collected: list[dict] = []
+        base_offset = offset
+        batch_size = max(fetch_retmax, 200)
+        saw_full_batch = False
+
+        while len(collected) < fetch_retmax:
+            base_rows = conn.execute(
+                f"""
+                SELECT
+                  g.gse AS accession,
+                  g.title AS title,
+                  g.summary AS summary,
+                  g.pubmed_id AS pubmed_id,
+                  g.last_update_date AS pdat,
+                  g.type AS gds_type,
+                  CASE WHEN lower(g.title) LIKE ? THEN 1 ELSE 0 END AS title_hit
+                FROM gse g
+                WHERE {where_sql}
+                ORDER BY title_hit DESC, g.last_update_date DESC, g.gse DESC
+                LIMIT ? OFFSET ?
+                """,
+                [title_pattern, *where_params, batch_size, base_offset],
+            ).fetchall()
+
+            if not base_rows:
+                break
+            saw_full_batch = len(base_rows) == batch_size
+
+            accessions = [str(r["accession"] or "") for r in base_rows if str(r["accession"] or "")]
+            species_map = _fetch_species_map(conn, accessions)
+
+            for r in base_rows:
+                accession = str(r["accession"] or "").strip()
+                organism, n_samples = species_map.get(accession, ("", 0))
+                organism = organism or ""
+                if species and species not in organism.lower():
+                    continue
+                collected.append(
+                    {
+                        "accession": accession,
+                        "title": str(r["title"] or ""),
+                        "summary": str(r["summary"] or ""),
+                        "pubmed_id": str(r["pubmed_id"] or "").strip(),
+                        "pdat": str(r["pdat"] or "").strip(),
+                        "gds_type": str(r["gds_type"] or ""),
+                        "organism": organism,
+                        "n_samples": n_samples,
+                    }
+                )
+                if len(collected) >= fetch_retmax:
+                    break
+
+            base_offset += len(base_rows)
+            if len(base_rows) < batch_size:
+                break
+
+    rows = collected[:fetch_retmax]
+    total_found = offset + len(rows)
+    if saw_full_batch:
+        total_found += 1
 
     items: list[dict] = []
     for row in rows:
-        accession = str(row["accession"] or "").strip()
-        title = str(row["title"] or "")
-        summary = str(row["summary"] or "")
-        gds_type = str(row["gds_type"] or "")
-        organism = str(row["organism"] or "").replace(",", " | ")
-        pubmed_id = str(row["pubmed_id"] or "").strip()
-        pdat = str(row["pdat"] or "").strip()
-        n_samples = int(row["n_samples"] or 0)
+        accession = str(row.get("accession") or "").strip()
+        title = str(row.get("title") or "")
+        summary = str(row.get("summary") or "")
+        gds_type = str(row.get("gds_type") or "")
+        organism = str(row.get("organism") or "").replace(",", " | ")
+        pubmed_id = str(row.get("pubmed_id") or "").strip()
+        pdat = str(row.get("pdat") or "").strip()
+        n_samples = int(row.get("n_samples") or 0)
 
         items.append(
             {
