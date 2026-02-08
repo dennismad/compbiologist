@@ -4,518 +4,545 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Virtual Computational Biologist</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
     <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
   </head>
   <body>
-    <main class="container">
+    <main class="container-xxl py-4">
       {% set has_search = geo_search_items|length > 0 %}
       {% set has_loaded = geo_loaded_summary.returned > 0 %}
       {% set has_analysis = analysis and analysis.metadata.n_genes > 0 %}
-      <header>
-        <div>
-          <h1>Virtual Computational Biologist</h1>
-          <p>Run the workflow in order: search GEO, load datasets, then run comparison analysis.</p>
+
+      <header class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+          <h1 class="h3 mb-2">Virtual Computational Biologist</h1>
+          <p class="text-secondary mb-0">Run the workflow in order: search GEO, load datasets, then run comparison analysis.</p>
         </div>
       </header>
 
-      <section class="workflow-rail">
-        <article class="workflow-step {% if has_search %}is-complete{% endif %}">
-          <p class="workflow-kicker">Step 1</p>
-          <h3>Search GEO</h3>
-          <p>{% if has_search %}Datasets found{% else %}Choose filters and run search{% endif %}</p>
-        </article>
-        <article class="workflow-step {% if has_loaded %}is-complete{% endif %}">
-          <p class="workflow-kicker">Step 2</p>
-          <h3>Load Datasets</h3>
-          <p>{% if has_loaded %}{{ geo_loaded_summary.returned }} loaded{% else %}Select rows and load{% endif %}</p>
-        </article>
-        <article class="workflow-step {% if has_analysis %}is-complete{% endif %}">
-          <p class="workflow-kicker">Step 3</p>
-          <h3>Run Analysis</h3>
-          <p>{% if has_analysis %}Results ready{% else %}Configure and run comparison{% endif %}</p>
-        </article>
-      </section>
-
-      <section class="panel step-panel" id="geo-search-section">
-        <div class="step-head">
-          <span class="step-index">1</span>
-          <div>
-            <h2>GEO Search</h2>
-            <p class="step-sub">Find candidate studies before loading them for analysis.</p>
-          </div>
-          <button type="button" class="toggle-step" data-target="geo-search-body" aria-expanded="true">Hide details</button>
-        </div>
-        <div id="geo-search-body" class="step-body">
-        <form action="{{ url_for('geo_search') }}" method="post" class="inline-form" data-preserve-scroll="true">
-          <label>
-            Query
-            <input type="text" name="query" value="{{ geo_search_summary.query or geo_default_query }}" />
-          </label>
-          <label>
-            Species
-            <select name="species_choice" id="species-choice">
-              <option value="" {% if not selected_species_option %}selected{% endif %}>All species</option>
-              {% for species_name in species_options %}
-                <option value="{{ species_name }}" {% if selected_species_option == species_name %}selected{% endif %}>{{ species_name }}</option>
-              {% endfor %}
-              <option value="__OTHER__" {% if selected_species_option == "__OTHER__" %}selected{% endif %}>Other</option>
-            </select>
-          </label>
-          <label id="species-other-wrap" class="{% if selected_species_option != '__OTHER__' %}is-hidden{% endif %}">
-            Other species
-            <input type="text" name="species_other" id="species-other" placeholder="e.g. Sus scrofa" value="{{ other_species_value }}" />
-          </label>
-          <label>
-            Experiment Type
-            <select name="experiment_type">
-              {% for exp_type in experiment_type_options %}
-                <option value="{{ exp_type }}" {% if exp_type == geo_search_summary.experiment_filter %}selected{% endif %}>{{ exp_type }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>
-            State Filter
-            <select name="state_filter">
-              {% for state_option in state_filter_options %}
-                <option value="{{ state_option }}" {% if state_option == geo_search_summary.state_filter %}selected{% endif %}>{{ state_option }}</option>
-              {% endfor %}
-            </select>
-          </label>
-          <label>
-            Count
-            <input type="number" name="retmax" min="1" max="100" value="{{ geo_search_summary.requested_retmax or geo_default_fetch_size }}" />
-          </label>
-          <label class="inline-check">
-            <input type="checkbox" name="only_analyzable" {% if geo_search_summary.only_analyzable %}checked{% endif %} />
-            Only analyzable datasets
-          </label>
-          <button type="submit" class="run-btn">Run Step 1 Search</button>
-        </form>
-
-        <p class="note">
-          Source: {{ geo_search_summary.source }} | Query: {{ geo_search_summary.query or "none" }} |
-          Returned: {{ geo_search_summary.returned }}{% if geo_search_summary.only_analyzable %} (from {{ geo_search_summary.returned_before_analyzable_filter }} prefiltered){% endif %} |
-          Total found: {{ geo_search_summary.total_found }}
-        </p>
-        {% if geo_search_summary.source.endswith("_error") %}
-          <p class="note">GEO metadata search failed. Check local SQLite/API setup and rerun search.</p>
-          {% if geo_search_summary.error %}
-            <p class="note">Error detail: {{ geo_search_summary.error }}</p>
-          {% endif %}
-        {% endif %}
-
-        {% if geo_search_items %}
-          <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
-            <div class="table-action">
-              <button type="submit" class="run-btn">Run Step 2 Load Selected</button>
-            </div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Select</th>
-                  <th>Accession</th>
-                  <th>Title</th>
-                  <th>Species</th>
-                  <th>Experiment</th>
-                  <th>State</th>
-                  <th>Analyzable</th>
-                  <th>Samples</th>
-                  <th>Links</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for row in geo_search_items %}
-                  {% set dataset_id = row.accession or row.uid %}
-                  <tr>
-                    <td><input type="checkbox" name="selected_ids" value="{{ dataset_id }}" {% if not row.analyzable %}disabled{% endif %} /></td>
-                    <td>
-                      {% if row.geo_link %}
-                        <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">{{ dataset_id }}</a>
-                      {% else %}
-                        {{ dataset_id }}
-                      {% endif %}
-                    </td>
-                    <td>{{ row.title }}</td>
-                    <td>{{ row.organism }}</td>
-                    <td>{{ row.experiment_type }}</td>
-                    <td>{{ row.state_profile }}</td>
-                    <td title="{{ row.analyzable_detail }}">{% if row.analyzable %}Yes{% else %}No{% endif %}</td>
-                    <td>{{ row.n_samples }}</td>
-                    <td class="link-list">
-                      {% if row.geo_link %}
-                        <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">GEO</a>
-                      {% endif %}
-                      {% if row.pubmed_link %}
-                        <a href="{{ row.pubmed_link }}" target="_blank" rel="noopener noreferrer">PubMed</a>
-                      {% endif %}
-                    </td>
-                  </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </form>
-          <p class="note">Only rows marked analyzable are selectable for loading into real DE analysis.</p>
-        {% else %}
-          <p class="note">No GEO search results yet. Run a GEO search first.</p>
-        {% endif %}
-        </div>
-      </section>
-
-      <section class="panel step-panel" id="loaded-section">
-        <div class="step-head">
-          <span class="step-index">2</span>
-          <div>
-            <h2>Loaded Datasets</h2>
-            <p class="step-sub">Review the selected studies before differential expression analysis.</p>
-          </div>
-          <button type="button" class="toggle-step" data-target="loaded-body" aria-expanded="true">Hide details</button>
-        </div>
-        <div id="loaded-body" class="step-body">
-        <p class="note">
-          Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
-          State filter: {{ geo_loaded_summary.state_filter }}
-        </p>
-
-        {% if geo_loaded_items %}
-          <table>
-            <thead>
-              <tr>
-                <th>Accession</th>
-                <th>Title</th>
-                <th>Species</th>
-                <th>Experiment</th>
-                <th>State</th>
-                <th>Samples</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in geo_loaded_items %}
-                <tr>
-                  <td>
-                    {% set loaded_id = row.accession or row.uid %}
-                    {% if row.geo_link %}
-                      <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">{{ loaded_id }}</a>
-                    {% else %}
-                      {{ loaded_id }}
-                    {% endif %}
-                  </td>
-                  <td>{{ row.title }}</td>
-                  <td>{{ row.organism }}</td>
-                  <td>{{ row.experiment_type }}</td>
-                  <td>{{ row.state_profile }}</td>
-                  <td>{{ row.n_samples }}</td>
-                </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        {% else %}
-          <p class="note">Select rows from GEO search and click "Run Step 2 Load Selected".</p>
-        {% endif %}
-        </div>
-      </section>
-
-      <section class="panel step-panel" id="analysis-section">
-        <div class="step-head">
-          <span class="step-index">3</span>
-          <div>
-            <h2>State Comparison Analysis</h2>
-            <p class="step-sub">Configure thresholds and run differential expression with enrichment.</p>
-          </div>
-          <button type="button" class="toggle-step" data-target="analysis-body" aria-expanded="true">Hide details</button>
-        </div>
-        <div id="analysis-body" class="step-body">
-        <form action="{{ url_for('run_analysis') }}" method="post" class="inline-form" data-preserve-scroll="true">
-          <label>
-            Comparison State
-            <select name="analysis_state">
-              {% for state_option in state_filter_options %}
-                {% if state_option != 'All' %}
-                  <option value="{{ state_option }}" {% if analysis and analysis.metadata.state_profile == state_option %}selected{% endif %}>{{ state_option }}</option>
-                {% endif %}
-              {% endfor %}
-            </select>
-          </label>
-          <label>
-            padj cutoff
-            <input type="text" inputmode="decimal" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff if analysis else '0.05' }}" />
-          </label>
-          <label>
-            |log2FC| cutoff
-            <input type="text" inputmode="decimal" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff if analysis else '1.0' }}" />
-          </label>
-          <label>
-            Enrichment
-            {% set current_enrichment_mode = analysis.metadata.enrichment_mode if analysis and analysis.metadata.enrichment_mode else 'auto' %}
-            <select name="enrichment_mode">
-              {% for mode in enrichment_mode_options %}
-                <option value="{{ mode }}" {% if mode == current_enrichment_mode %}selected{% endif %}>
-                  {% if mode == 'auto' %}Auto (g:Profiler -> local){% elif mode == 'gprofiler' %}g:Profiler only{% elif mode == 'local' %}Local pathways only{% else %}{{ mode }}{% endif %}
-                </option>
-              {% endfor %}
-            </select>
-          </label>
-          <button type="submit" class="run-btn" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Step 3 Analysis</button>
-        </form>
-
-        {% if analysis %}
-          <p class="note">
-            Mode: {{ analysis.metadata.mode }} | Enrichment: {{ analysis.metadata.enrichment_mode if analysis.metadata.enrichment_mode else 'auto' }}{% if analysis.metadata.real_dataset_used %} | GEO matrix: {{ analysis.metadata.real_dataset_used }}{% endif %}{% if analysis.metadata.group_a_n and analysis.metadata.group_b_n %} | {{ analysis.metadata.group_a_name }} n={{ analysis.metadata.group_a_n }}, {{ analysis.metadata.group_b_name }} n={{ analysis.metadata.group_b_n }}{% endif %}
-          </p>
-          {% if analysis.metadata.notes %}
-            <p class="note">{{ analysis.metadata.notes|join(' ; ') }}</p>
-          {% endif %}
-          {% if analysis.metadata.mode == "needs_group_selection" and analysis.group_choice %}
-            <h3>Manual Group Selection Required</h3>
-            <form action="{{ url_for('run_analysis_manual') }}" method="post" class="panel" data-preserve-scroll="true">
-              <input type="hidden" name="analysis_state" value="{{ analysis.metadata.state_profile }}" />
-              <input type="hidden" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff }}" />
-              <input type="hidden" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff }}" />
-              <input type="hidden" name="enrichment_mode" value="{{ analysis.metadata.enrichment_mode if analysis.metadata.enrichment_mode else 'auto' }}" />
-              <input type="hidden" name="manual_gse" value="{{ analysis.group_choice.gse }}" />
-
-              <p class="note">Dataset: {{ analysis.group_choice.gse }} | Source: {{ analysis.group_choice.source }}</p>
-
-              <div class="inline-form">
-                <label>
-                  Group A Name
-                  <input type="text" name="group_a_name" value="{{ analysis.group_choice.group_a_name }}" />
-                </label>
-                <label>
-                  Group B Name
-                  <input type="text" name="group_b_name" value="{{ analysis.group_choice.group_b_name }}" />
-                </label>
+      <section class="row g-3 mb-4">
+        <div class="col-12 col-lg-4">
+          <article class="card h-100 shadow-sm border {% if has_search %}workflow-complete{% else %}workflow-pending{% endif %}">
+            <div class="card-body">
+              <p class="workflow-kicker mb-1">Step 1</p>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="h5 mb-0">Search GEO</h2>
+                {% if has_search %}<span class="badge rounded-pill text-bg-success">Complete</span>{% endif %}
               </div>
+              <p class="text-secondary mb-0">{% if has_search %}Datasets found{% else %}Choose filters and run search{% endif %}</p>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-lg-4">
+          <article class="card h-100 shadow-sm border {% if has_loaded %}workflow-complete{% else %}workflow-pending{% endif %}">
+            <div class="card-body">
+              <p class="workflow-kicker mb-1">Step 2</p>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="h5 mb-0">Load Datasets</h2>
+                {% if has_loaded %}<span class="badge rounded-pill text-bg-success">Complete</span>{% endif %}
+              </div>
+              <p class="text-secondary mb-0">{% if has_loaded %}{{ geo_loaded_summary.returned }} loaded{% else %}Select rows and load{% endif %}</p>
+            </div>
+          </article>
+        </div>
+        <div class="col-12 col-lg-4">
+          <article class="card h-100 shadow-sm border {% if has_analysis %}workflow-complete{% else %}workflow-pending{% endif %}">
+            <div class="card-body">
+              <p class="workflow-kicker mb-1">Step 3</p>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <h2 class="h5 mb-0">Run Analysis</h2>
+                {% if has_analysis %}<span class="badge rounded-pill text-bg-success">Complete</span>{% endif %}
+              </div>
+              <p class="text-secondary mb-0">{% if has_analysis %}Results ready{% else %}Configure and run comparison{% endif %}</p>
+            </div>
+          </article>
+        </div>
+      </section>
 
-              <h4>Sample Assignment</h4>
-              <p class="note">Assign each sample to Group A, Group B, or Exclude. At least 2 samples are required in each analysis group.</p>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Sample ID</th>
-                    <th>Assign</th>
-                    <th>Suggested Group</th>
-                    <th>Annotation</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for opt in analysis.group_choice.sample_options %}
-                    {% set suggested = 'Exclude' %}
-                    {% if opt.id in analysis.group_choice.suggested_group_a %}
-                      {% set suggested = analysis.group_choice.group_a_name %}
-                    {% elif opt.id in analysis.group_choice.suggested_group_b %}
-                      {% set suggested = analysis.group_choice.group_b_name %}
-                    {% endif %}
-                    {% set default_code = 'X' %}
-                    {% if opt.id in analysis.group_choice.suggested_group_a %}
-                      {% set default_code = 'A' %}
-                    {% elif opt.id in analysis.group_choice.suggested_group_b %}
-                      {% set default_code = 'B' %}
-                    {% endif %}
-                    <tr>
-                      <td class="sample-id-cell">
-                        {{ opt.id }}
-                        <input type="hidden" name="sample_ids" value="{{ opt.id }}" />
-                      </td>
-                      <td>
-                        <select name="sample_groups" class="sample-group-select">
-                          <option value="A" {% if default_code == 'A' %}selected{% endif %}>{{ analysis.group_choice.group_a_name }}</option>
-                          <option value="B" {% if default_code == 'B' %}selected{% endif %}>{{ analysis.group_choice.group_b_name }}</option>
-                          <option value="X" {% if default_code == 'X' %}selected{% endif %}>Exclude</option>
-                        </select>
-                      </td>
-                      <td>
-                        {{ suggested }}
-                      </td>
-                      <td class="sample-annotation">{{ opt.label }}</td>
-                    </tr>
+      <section class="card shadow-sm mb-3" id="geo-search-section">
+        <div class="card-header bg-white d-flex align-items-start justify-content-between gap-3">
+          <div>
+            <p class="workflow-kicker mb-1">Step 1</p>
+            <h2 class="h5 mb-1">GEO Search</h2>
+            <p class="text-secondary mb-0">Find candidate studies before loading them for analysis.</p>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm px-3" type="button" data-bs-toggle="collapse" data-bs-target="#geo-search-body" aria-expanded="true" aria-controls="geo-search-body">Toggle details</button>
+        </div>
+        <div class="collapse show" id="geo-search-body">
+          <div class="card-body">
+            <form action="{{ url_for('geo_search') }}" method="post" class="row g-3 align-items-end" data-preserve-scroll="true">
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Query</label>
+                <input class="form-control" type="text" name="query" value="{{ geo_search_summary.query or geo_default_query }}" />
+              </div>
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Species</label>
+                <select class="form-select" name="species_choice" id="species-choice">
+                  <option value="" {% if not selected_species_option %}selected{% endif %}>All species</option>
+                  {% for species_name in species_options %}
+                    <option value="{{ species_name }}" {% if selected_species_option == species_name %}selected{% endif %}>{{ species_name }}</option>
                   {% endfor %}
-                </tbody>
-              </table>
+                  <option value="__OTHER__" {% if selected_species_option == "__OTHER__" %}selected{% endif %}>Other</option>
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-lg-3 {% if selected_species_option != '__OTHER__' %}d-none{% endif %}" id="species-other-wrap">
+                <label class="form-label">Other species</label>
+                <input class="form-control" type="text" name="species_other" id="species-other" placeholder="e.g. Sus scrofa" value="{{ other_species_value }}" />
+              </div>
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Experiment Type</label>
+                <select class="form-select" name="experiment_type">
+                  {% for exp_type in experiment_type_options %}
+                    <option value="{{ exp_type }}" {% if exp_type == geo_search_summary.experiment_filter %}selected{% endif %}>{{ exp_type }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">State Filter</label>
+                <select class="form-select" name="state_filter">
+                  {% for state_option in state_filter_options %}
+                    <option value="{{ state_option }}" {% if state_option == geo_search_summary.state_filter %}selected{% endif %}>{{ state_option }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">Count</label>
+                <input class="form-control" type="number" name="retmax" min="1" max="100" value="{{ geo_search_summary.requested_retmax or geo_default_fetch_size }}" />
+              </div>
+              <div class="col-6 col-md-4 col-lg-3">
+                <div class="form-check form-switch mt-4 pt-1">
+                  <input class="form-check-input" type="checkbox" id="only-analyzable" name="only_analyzable" {% if geo_search_summary.only_analyzable %}checked{% endif %} />
+                  <label class="form-check-label" for="only-analyzable">Only analyzable datasets</label>
+                </div>
+              </div>
+              <div class="col-12 col-lg-3 d-grid">
+              <button type="submit" class="btn btn-success btn-lg">Run Step 1 Search</button>
+            </div>
+          </form>
 
-              <div class="table-action">
-                <button type="submit" class="run-btn">Run Analysis With Selected Groups</button>
+            <p class="small text-secondary mb-2">
+              Source: {{ geo_search_summary.source }} | Query: {{ geo_search_summary.query or "none" }} |
+              Returned: {{ geo_search_summary.returned }}{% if geo_search_summary.only_analyzable %} (from {{ geo_search_summary.returned_before_analyzable_filter }} prefiltered){% endif %} |
+              Total found: {{ geo_search_summary.total_found }}
+            </p>
+            {% if geo_search_summary.source.endswith("_error") %}
+              <div class="alert alert-warning py-2 mb-2" role="alert">GEO metadata search failed. Check local SQLite/API setup and rerun search.</div>
+              {% if geo_search_summary.error %}
+                <p class="small text-secondary mb-2">Error detail: {{ geo_search_summary.error }}</p>
+              {% endif %}
+            {% endif %}
+
+            {% if geo_search_items %}
+              <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
+                <div class="mb-2 d-grid d-md-inline-block">
+                  <button type="submit" class="btn btn-success">Run Step 2 Load Selected</button>
+                </div>
+                <div class="table-responsive rounded border">
+                  <table class="table table-sm table-hover align-middle">
+                    <thead class="table-light">
+                      <tr>
+                        <th>Select</th>
+                        <th>Accession</th>
+                        <th>Title</th>
+                        <th>Species</th>
+                        <th>Experiment</th>
+                        <th>State</th>
+                        <th>Analyzable</th>
+                        <th>Samples</th>
+                        <th>Links</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for row in geo_search_items %}
+                        {% set dataset_id = row.accession or row.uid %}
+                        <tr>
+                          <td><input class="form-check-input" type="checkbox" name="selected_ids" value="{{ dataset_id }}" {% if not row.analyzable %}disabled{% endif %} /></td>
+                          <td>
+                            {% if row.geo_link %}
+                              <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">{{ dataset_id }}</a>
+                            {% else %}
+                              {{ dataset_id }}
+                            {% endif %}
+                          </td>
+                          <td>{{ row.title }}</td>
+                          <td>{{ row.organism }}</td>
+                          <td>{{ row.experiment_type }}</td>
+                          <td>{{ row.state_profile }}</td>
+                          <td title="{{ row.analyzable_detail }}">
+                            {% if row.analyzable %}
+                              <span class="badge text-bg-success">Yes</span>
+                            {% else %}
+                              <span class="badge text-bg-secondary">No</span>
+                            {% endif %}
+                          </td>
+                          <td>{{ row.n_samples }}</td>
+                          <td>
+                            <div class="d-flex gap-2">
+                              {% if row.geo_link %}
+                                <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">GEO</a>
+                              {% endif %}
+                              {% if row.pubmed_link %}
+                                <a href="{{ row.pubmed_link }}" target="_blank" rel="noopener noreferrer">PubMed</a>
+                              {% endif %}
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </form>
+              <p class="small text-secondary mb-0">Only rows marked analyzable are selectable for loading into real DE analysis.</p>
+            {% else %}
+              <p class="small text-secondary mb-0">No GEO search results yet. Run a GEO search first.</p>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="card shadow-sm mb-3" id="loaded-section">
+        <div class="card-header bg-white d-flex align-items-start justify-content-between gap-3">
+          <div>
+            <p class="workflow-kicker mb-1">Step 2</p>
+            <h2 class="h5 mb-1">Loaded Datasets</h2>
+            <p class="text-secondary mb-0">Review selected studies before differential expression analysis.</p>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm px-3" type="button" data-bs-toggle="collapse" data-bs-target="#loaded-body" aria-expanded="true" aria-controls="loaded-body">Toggle details</button>
+        </div>
+        <div class="collapse show" id="loaded-body">
+          <div class="card-body">
+            <p class="small text-secondary mb-2">
+              Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
+              State filter: {{ geo_loaded_summary.state_filter }}
+            </p>
+
+            {% if geo_loaded_items %}
+              <div class="table-responsive rounded border">
+                <table class="table table-sm table-hover align-middle">
+                  <thead class="table-light">
+                    <tr>
+                      <th>Accession</th>
+                      <th>Title</th>
+                      <th>Species</th>
+                      <th>Experiment</th>
+                      <th>State</th>
+                      <th>Samples</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {% for row in geo_loaded_items %}
+                      <tr>
+                        <td>
+                          {% set loaded_id = row.accession or row.uid %}
+                          {% if row.geo_link %}
+                            <a href="{{ row.geo_link }}" target="_blank" rel="noopener noreferrer">{{ loaded_id }}</a>
+                          {% else %}
+                            {{ loaded_id }}
+                          {% endif %}
+                        </td>
+                        <td>{{ row.title }}</td>
+                        <td>{{ row.organism }}</td>
+                        <td>{{ row.experiment_type }}</td>
+                        <td>{{ row.state_profile }}</td>
+                        <td>{{ row.n_samples }}</td>
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            {% else %}
+              <p class="small text-secondary mb-0">Select rows from GEO search and click "Run Step 2 Load Selected".</p>
+            {% endif %}
+          </div>
+        </div>
+      </section>
+
+      <section class="card shadow-sm mb-3" id="analysis-section">
+        <div class="card-header bg-white d-flex align-items-start justify-content-between gap-3">
+          <div>
+            <p class="workflow-kicker mb-1">Step 3</p>
+            <h2 class="h5 mb-1">State Comparison Analysis</h2>
+            <p class="text-secondary mb-0">Configure thresholds and run differential expression with enrichment.</p>
+          </div>
+          <button class="btn btn-outline-secondary btn-sm px-3" type="button" data-bs-toggle="collapse" data-bs-target="#analysis-body" aria-expanded="true" aria-controls="analysis-body">Toggle details</button>
+        </div>
+        <div class="collapse show" id="analysis-body">
+          <div class="card-body">
+            <form action="{{ url_for('run_analysis') }}" method="post" class="row g-3 align-items-end" data-preserve-scroll="true">
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Comparison State</label>
+                <select class="form-select" name="analysis_state">
+                  {% for state_option in state_filter_options %}
+                    {% if state_option != 'All' %}
+                      <option value="{{ state_option }}" {% if analysis and analysis.metadata.state_profile == state_option %}selected{% endif %}>{{ state_option }}</option>
+                    {% endif %}
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">padj cutoff</label>
+                <input class="form-control" type="text" inputmode="decimal" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff if analysis else '0.05' }}" />
+              </div>
+              <div class="col-6 col-md-3 col-lg-2">
+                <label class="form-label">|log2FC| cutoff</label>
+                <input class="form-control" type="text" inputmode="decimal" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff if analysis else '1.0' }}" />
+              </div>
+              <div class="col-12 col-md-6 col-lg-3">
+                <label class="form-label">Enrichment</label>
+                {% set current_enrichment_mode = analysis.metadata.enrichment_mode if analysis and analysis.metadata.enrichment_mode else 'auto' %}
+                <select class="form-select" name="enrichment_mode">
+                  {% for mode in enrichment_mode_options %}
+                    <option value="{{ mode }}" {% if mode == current_enrichment_mode %}selected{% endif %}>
+                      {% if mode == 'auto' %}Auto (g:Profiler -> local){% elif mode == 'gprofiler' %}g:Profiler only{% elif mode == 'local' %}Local pathways only{% else %}{{ mode }}{% endif %}
+                    </option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-12 col-lg-2 d-grid">
+                <button type="submit" class="btn btn-success btn-lg" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Step 3 Analysis</button>
               </div>
             </form>
-          {% elif analysis.metadata.mode == "no_usable_matrix_data" %}
-            <h3>Real Analysis Blocked</h3>
-            <p class="note">
-              The selected dataset does not expose a usable expression matrix for this pipeline.
-              Load a different GSE (with tabular expression/count matrix files) and rerun analysis.
-            </p>
-          {% elif analysis.metadata.mode == "missing_dependency" %}
-            <h3>Real Analysis Blocked</h3>
-            <p class="note">
-              DESeq2 analysis requires the `pydeseq2` package in your environment.
-              Install dependencies and rerun analysis.
-            </p>
-          {% elif analysis.metadata.n_genes > 0 %}
-            <section class="cards">
-              <article class="card"><h2>Datasets</h2><p>{{ analysis.metadata.n_datasets }}</p></article>
-              <article class="card"><h2>Genes</h2><p>{{ analysis.metadata.n_genes }}</p></article>
-              <article class="card"><h2>Upregulated</h2><p>{{ analysis.metadata.n_up }}</p></article>
-              <article class="card"><h2>Downregulated</h2><p>{{ analysis.metadata.n_down }}</p></article>
-            </section>
 
-            <h3>Volcano Plot</h3>
-            <div id="volcano-plot" class="volcano"></div>
+            {% if analysis %}
+              <p class="small text-secondary mb-2">
+                Mode: {{ analysis.metadata.mode }} | Enrichment: {{ analysis.metadata.enrichment_mode if analysis.metadata.enrichment_mode else 'auto' }}{% if analysis.metadata.real_dataset_used %} | GEO matrix: {{ analysis.metadata.real_dataset_used }}{% endif %}{% if analysis.metadata.group_a_n and analysis.metadata.group_b_n %} | {{ analysis.metadata.group_a_name }} n={{ analysis.metadata.group_a_n }}, {{ analysis.metadata.group_b_name }} n={{ analysis.metadata.group_b_n }}{% endif %}
+              </p>
+              {% if analysis.metadata.notes %}
+                <div class="alert alert-warning py-2" role="alert">{{ analysis.metadata.notes|join(' ; ') }}</div>
+              {% endif %}
 
-            <div class="two-col">
-              <div>
-                <h3>Top Upregulated Genes</h3>
-                <table>
-                  <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
-                  <tbody>
-                    {% for row in analysis.top_up %}
-                      <tr>
-                        <td>
-                          {% if row.gene_url %}
-                            <a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>
-                          {% else %}
-                            {{ row.gene }}
-                          {% endif %}
-                        </td>
-                        <td>{{ '%.2f'|format(row.log2fc) }}</td>
-                        <td>{{ '%.3g'|format(row.padj) }}</td>
-                      </tr>
-                    {% endfor %}
-                    {% if not analysis.top_up %}
-                      <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <h3>Top Downregulated Genes</h3>
-                <table>
-                  <thead><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
-                  <tbody>
-                    {% for row in analysis.top_down %}
-                      <tr>
-                        <td>
-                          {% if row.gene_url %}
-                            <a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>
-                          {% else %}
-                            {{ row.gene }}
-                          {% endif %}
-                        </td>
-                        <td>{{ '%.2f'|format(row.log2fc) }}</td>
-                        <td>{{ '%.3g'|format(row.padj) }}</td>
-                      </tr>
-                    {% endfor %}
-                    {% if not analysis.top_down %}
-                      <tr><td colspan="3" class="note">No genes passed thresholds.</td></tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+              {% if analysis.metadata.mode == "needs_group_selection" and analysis.group_choice %}
+                <div class="card border-0 bg-light mb-3">
+                  <div class="card-body">
+                    <h3 class="h6 mb-3">Manual Group Selection Required</h3>
+                    <form action="{{ url_for('run_analysis_manual') }}" method="post" data-preserve-scroll="true">
+                      <input type="hidden" name="analysis_state" value="{{ analysis.metadata.state_profile }}" />
+                      <input type="hidden" name="padj_cutoff" value="{{ analysis.metadata.padj_cutoff }}" />
+                      <input type="hidden" name="log2fc_cutoff" value="{{ analysis.metadata.log2fc_cutoff }}" />
+                      <input type="hidden" name="enrichment_mode" value="{{ analysis.metadata.enrichment_mode if analysis.metadata.enrichment_mode else 'auto' }}" />
+                      <input type="hidden" name="manual_gse" value="{{ analysis.group_choice.gse }}" />
 
-            <div class="two-col">
-              <div>
-                <h3>Enrichment (Up)</h3>
-                <table>
-                  <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
-                  <tbody>
-                    {% for row in analysis.enrichment_up %}
-                      <tr>
-                        <td>
-                          {% if row.pathway_url %}
-                            <a href="{{ row.pathway_url }}" target="_blank" rel="noopener noreferrer">{{ row.pathway }}</a>
-                          {% else %}
-                            {{ row.pathway }}
-                          {% endif %}
-                        </td>
-                        <td>{{ row.overlap }}/{{ row.set_size }}</td>
-                        <td>{{ '%.3g'|format(row.padj) }}</td>
-                      </tr>
-                    {% endfor %}
-                    {% if not analysis.enrichment_up %}
-                      <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
-              <div>
-                <h3>Enrichment (Down)</h3>
-                <table>
-                  <thead><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
-                  <tbody>
-                    {% for row in analysis.enrichment_down %}
-                      <tr>
-                        <td>
-                          {% if row.pathway_url %}
-                            <a href="{{ row.pathway_url }}" target="_blank" rel="noopener noreferrer">{{ row.pathway }}</a>
-                          {% else %}
-                            {{ row.pathway }}
-                          {% endif %}
-                        </td>
-                        <td>{{ row.overlap }}/{{ row.set_size }}</td>
-                        <td>{{ '%.3g'|format(row.padj) }}</td>
-                      </tr>
-                    {% endfor %}
-                    {% if not analysis.enrichment_down %}
-                      <tr><td colspan="3" class="note">No enriched pathways at current thresholds.</td></tr>
-                    {% endif %}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          {% else %}
-            <p class="note">No real-analysis results yet.</p>
-          {% endif %}
-        {% else %}
-          <p class="note">Run analysis after loading datasets to generate volcano and enrichment outputs.</p>
-        {% endif %}
+                      <p class="small text-secondary">Dataset: {{ analysis.group_choice.gse }} | Source: {{ analysis.group_choice.source }}</p>
+
+                      <div class="row g-3 mb-2">
+                        <div class="col-12 col-md-6">
+                          <label class="form-label">Group A Name</label>
+                          <input class="form-control" type="text" name="group_a_name" value="{{ analysis.group_choice.group_a_name }}" />
+                        </div>
+                        <div class="col-12 col-md-6">
+                          <label class="form-label">Group B Name</label>
+                          <input class="form-control" type="text" name="group_b_name" value="{{ analysis.group_choice.group_b_name }}" />
+                        </div>
+                      </div>
+
+                      <p class="small text-secondary mb-2">Assign each sample to Group A, Group B, or Exclude. At least 2 samples are required in each analysis group.</p>
+
+                      <div class="table-responsive rounded border bg-white">
+                        <table class="table table-sm align-middle">
+                          <thead class="table-light">
+                            <tr>
+                              <th>Sample ID</th>
+                              <th>Assign</th>
+                              <th>Suggested Group</th>
+                              <th>Annotation</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {% for opt in analysis.group_choice.sample_options %}
+                              {% set suggested = 'Exclude' %}
+                              {% if opt.id in analysis.group_choice.suggested_group_a %}
+                                {% set suggested = analysis.group_choice.group_a_name %}
+                              {% elif opt.id in analysis.group_choice.suggested_group_b %}
+                                {% set suggested = analysis.group_choice.group_b_name %}
+                              {% endif %}
+                              {% set default_code = 'X' %}
+                              {% if opt.id in analysis.group_choice.suggested_group_a %}
+                                {% set default_code = 'A' %}
+                              {% elif opt.id in analysis.group_choice.suggested_group_b %}
+                                {% set default_code = 'B' %}
+                              {% endif %}
+                              <tr>
+                                <td class="sample-id-cell">
+                                  {{ opt.id }}
+                                  <input type="hidden" name="sample_ids" value="{{ opt.id }}" />
+                                </td>
+                                <td>
+                                  <select class="form-select form-select-sm sample-group-select" name="sample_groups">
+                                    <option value="A" {% if default_code == 'A' %}selected{% endif %}>{{ analysis.group_choice.group_a_name }}</option>
+                                    <option value="B" {% if default_code == 'B' %}selected{% endif %}>{{ analysis.group_choice.group_b_name }}</option>
+                                    <option value="X" {% if default_code == 'X' %}selected{% endif %}>Exclude</option>
+                                  </select>
+                                </td>
+                                <td>{{ suggested }}</td>
+                                <td class="sample-annotation">{{ opt.label }}</td>
+                              </tr>
+                            {% endfor %}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      <div class="d-grid d-md-inline-block mt-2">
+                        <button type="submit" class="btn btn-success">Run Analysis With Selected Groups</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+              {% elif analysis.metadata.mode == "no_usable_matrix_data" %}
+                <div class="alert alert-danger" role="alert">
+                  The selected dataset does not expose a usable expression matrix for this pipeline. Load a different GSE and rerun analysis.
+                </div>
+              {% elif analysis.metadata.mode == "missing_dependency" %}
+                <div class="alert alert-danger" role="alert">
+                  DESeq2 analysis requires the <code>pydeseq2</code> package in your environment. Install dependencies and rerun analysis.
+                </div>
+              {% elif analysis.metadata.n_genes > 0 %}
+                <div class="analysis-shell p-3 p-lg-4 rounded border bg-body-tertiary">
+                  <section class="row g-3 mb-3">
+                    <div class="col-6 col-lg-3"><article class="card h-100 metric-card"><div class="card-body"><p class="text-secondary small mb-1">Datasets</p><p class="display-6 mb-0 fw-semibold">{{ analysis.metadata.n_datasets }}</p></div></article></div>
+                    <div class="col-6 col-lg-3"><article class="card h-100 metric-card"><div class="card-body"><p class="text-secondary small mb-1">Genes</p><p class="display-6 mb-0 fw-semibold">{{ analysis.metadata.n_genes }}</p></div></article></div>
+                    <div class="col-6 col-lg-3"><article class="card h-100 metric-card"><div class="card-body"><p class="text-secondary small mb-1">Upregulated</p><p class="display-6 mb-0 fw-semibold text-danger">{{ analysis.metadata.n_up }}</p></div></article></div>
+                    <div class="col-6 col-lg-3"><article class="card h-100 metric-card"><div class="card-body"><p class="text-secondary small mb-1">Downregulated</p><p class="display-6 mb-0 fw-semibold text-primary">{{ analysis.metadata.n_down }}</p></div></article></div>
+                  </section>
+
+                  <section class="card border-0 shadow-sm mb-3">
+                    <div class="card-header bg-white"><h3 class="h6 mb-0">Volcano Plot</h3></div>
+                    <div class="card-body"><div id="volcano-plot" class="volcano border rounded bg-white"></div></div>
+                  </section>
+
+                  <div class="row g-3">
+                    <div class="col-12 col-xl-6">
+                      <section class="card h-100 result-card">
+                        <div class="card-header bg-white"><h3 class="h6 mb-0">Top Upregulated Genes</h3></div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                              <thead class="table-light"><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                              <tbody>
+                                {% for row in analysis.top_up %}
+                                  <tr>
+                                    <td>{% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>{% else %}{{ row.gene }}{% endif %}</td>
+                                    <td>{{ '%.2f'|format(row.log2fc) }}</td>
+                                    <td>{{ '%.3g'|format(row.padj) }}</td>
+                                  </tr>
+                                {% endfor %}
+                                {% if not analysis.top_up %}
+                                  <tr><td colspan="3" class="text-secondary small">No genes passed thresholds.</td></tr>
+                                {% endif %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                      <section class="card h-100 result-card">
+                        <div class="card-header bg-white"><h3 class="h6 mb-0">Top Downregulated Genes</h3></div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                              <thead class="table-light"><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                              <tbody>
+                                {% for row in analysis.top_down %}
+                                  <tr>
+                                    <td>{% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>{% else %}{{ row.gene }}{% endif %}</td>
+                                    <td>{{ '%.2f'|format(row.log2fc) }}</td>
+                                    <td>{{ '%.3g'|format(row.padj) }}</td>
+                                  </tr>
+                                {% endfor %}
+                                {% if not analysis.top_down %}
+                                  <tr><td colspan="3" class="text-secondary small">No genes passed thresholds.</td></tr>
+                                {% endif %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+
+                  <div class="row g-3 mt-1">
+                    <div class="col-12 col-xl-6">
+                      <section class="card h-100 result-card">
+                        <div class="card-header bg-white"><h3 class="h6 mb-0">Enrichment (Up)</h3></div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                              <thead class="table-light"><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
+                              <tbody>
+                                {% for row in analysis.enrichment_up %}
+                                  <tr>
+                                    <td>{% if row.pathway_url %}<a href="{{ row.pathway_url }}" target="_blank" rel="noopener noreferrer">{{ row.pathway }}</a>{% else %}{{ row.pathway }}{% endif %}</td>
+                                    <td>{{ row.overlap }}/{{ row.set_size }}</td>
+                                    <td>{{ '%.3g'|format(row.padj) }}</td>
+                                  </tr>
+                                {% endfor %}
+                                {% if not analysis.enrichment_up %}
+                                  <tr><td colspan="3" class="text-secondary small">No enriched pathways at current thresholds.</td></tr>
+                                {% endif %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                    <div class="col-12 col-xl-6">
+                      <section class="card h-100 result-card">
+                        <div class="card-header bg-white"><h3 class="h6 mb-0">Enrichment (Down)</h3></div>
+                        <div class="card-body p-0">
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                              <thead class="table-light"><tr><th>Pathway</th><th>Overlap</th><th>padj</th></tr></thead>
+                              <tbody>
+                                {% for row in analysis.enrichment_down %}
+                                  <tr>
+                                    <td>{% if row.pathway_url %}<a href="{{ row.pathway_url }}" target="_blank" rel="noopener noreferrer">{{ row.pathway }}</a>{% else %}{{ row.pathway }}{% endif %}</td>
+                                    <td>{{ row.overlap }}/{{ row.set_size }}</td>
+                                    <td>{{ '%.3g'|format(row.padj) }}</td>
+                                  </tr>
+                                {% endfor %}
+                                {% if not analysis.enrichment_down %}
+                                  <tr><td colspan="3" class="text-secondary small">No enriched pathways at current thresholds.</td></tr>
+                                {% endif %}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </section>
+                    </div>
+                  </div>
+                </div>
+              {% else %}
+                <p class="small text-secondary mb-0">No real-analysis results yet.</p>
+              {% endif %}
+            {% else %}
+              <p class="small text-secondary mb-0">Run analysis after loading datasets to generate volcano and enrichment outputs.</p>
+            {% endif %}
+          </div>
         </div>
       </section>
 
-      <footer>
-        <p>Protein refresh metadata: {{ protein_metadata.data_source }} | {{ protein_metadata.last_updated_utc }}</p>
+      <footer class="small text-secondary mt-3">
+        Protein refresh metadata: {{ protein_metadata.data_source }} | {{ protein_metadata.last_updated_utc }}
       </footer>
     </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     <script>
       (() => {
-        const key = "scrollYBeforePost";
-        const pending = window.sessionStorage.getItem(key);
-        if (pending) {
-          const y = parseInt(pending, 10);
+        const scrollKey = "scrollYBeforePost";
+        const pendingY = window.sessionStorage.getItem(scrollKey);
+        if (pendingY) {
+          const y = parseInt(pendingY, 10);
           if (!Number.isNaN(y)) {
             window.scrollTo(0, y);
           }
-          window.sessionStorage.removeItem(key);
+          window.sessionStorage.removeItem(scrollKey);
         }
 
         document.querySelectorAll("form[data-preserve-scroll='true']").forEach((form) => {
           form.addEventListener("submit", () => {
-            window.sessionStorage.setItem(key, String(window.scrollY));
-          });
-        });
-
-        const collapseKeyPrefix = "stepCollapsed:";
-        document.querySelectorAll(".toggle-step").forEach((btn) => {
-          const targetId = btn.getAttribute("data-target");
-          if (!targetId) return;
-          const target = document.getElementById(targetId);
-          if (!target) return;
-
-          const applyCollapsed = (collapsed) => {
-            target.classList.toggle("is-collapsed", collapsed);
-            btn.textContent = collapsed ? "Show details" : "Hide details";
-            btn.setAttribute("aria-expanded", collapsed ? "false" : "true");
-          };
-
-          const saved = window.localStorage.getItem(collapseKeyPrefix + targetId) === "1";
-          applyCollapsed(saved);
-
-          btn.addEventListener("click", () => {
-            const nextCollapsed = !target.classList.contains("is-collapsed");
-            applyCollapsed(nextCollapsed);
-            if (nextCollapsed) {
-              window.localStorage.setItem(collapseKeyPrefix + targetId, "1");
-            } else {
-              window.localStorage.removeItem(collapseKeyPrefix + targetId);
-            }
+            window.sessionStorage.setItem(scrollKey, String(window.scrollY));
           });
         });
 
@@ -525,7 +552,7 @@
         if (speciesChoice && speciesOtherWrap) {
           const syncSpeciesOther = () => {
             const isOther = speciesChoice.value === "__OTHER__";
-            speciesOtherWrap.classList.toggle("is-hidden", !isOther);
+            speciesOtherWrap.classList.toggle("d-none", !isOther);
             if (speciesOtherInput) {
               speciesOtherInput.disabled = !isOther;
             }
@@ -533,8 +560,24 @@
           syncSpeciesOther();
           speciesChoice.addEventListener("change", syncSpeciesOther);
         }
+
+        const collapses = ["geo-search-body", "loaded-body", "analysis-body"];
+        collapses.forEach((id) => {
+          const el = document.getElementById(id);
+          if (!el || !window.bootstrap) return;
+          const key = `collapse:${id}`;
+          const instance = bootstrap.Collapse.getOrCreateInstance(el, { toggle: false });
+          if (window.localStorage.getItem(key) === "1") {
+            instance.hide();
+          } else {
+            instance.show();
+          }
+          el.addEventListener("hidden.bs.collapse", () => window.localStorage.setItem(key, "1"));
+          el.addEventListener("shown.bs.collapse", () => window.localStorage.removeItem(key));
+        });
       })();
     </script>
+
     {% if analysis and analysis.metadata.n_genes > 0 %}
       <script>
         (() => {
@@ -565,8 +608,8 @@
 
           const layout = {
             margin: { l: 50, r: 20, t: 20, b: 50 },
-            paper_bgcolor: "#fbfdfb",
-            plot_bgcolor: "#fbfdfb",
+            paper_bgcolor: "#ffffff",
+            plot_bgcolor: "#ffffff",
             xaxis: { title: "log2 Fold Change", zeroline: true, zerolinecolor: "#4d5a52" },
             yaxis: { title: "-log10 adjusted p-value", zeroline: false },
             legend: { orientation: "h", y: 1.1 }

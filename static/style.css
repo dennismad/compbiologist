@@ -1,375 +1,61 @@
 :root {
-  --bg-top: #e8f4ea;
-  --bg-bottom: #f8fbf8;
-  --panel: #ffffff;
-  --panel-soft: #f6fbf7;
-  --text: #1d3025;
-  --muted: #577163;
-  --line: #d4e3d8;
-  --accent: #1f8a4d;
-  --accent-strong: #15773f;
-  --accent-soft: #dff3e5;
-  --danger: #b93737;
-  --shadow: 0 10px 28px rgba(24, 53, 34, 0.08);
-}
-
-* {
-  box-sizing: border-box;
+  --app-bg-top: #edf7ef;
+  --app-bg-bottom: #f9fbf9;
 }
 
 body {
-  margin: 0;
-  color: var(--text);
-  font-family: "Avenir Next", "Fira Sans", "Trebuchet MS", "Segoe UI", sans-serif;
   background:
-    radial-gradient(circle at 18% 14%, rgba(45, 151, 83, 0.15), transparent 32%),
-    radial-gradient(circle at 82% 8%, rgba(51, 120, 80, 0.12), transparent 28%),
-    linear-gradient(180deg, var(--bg-top) 0%, var(--bg-bottom) 48%);
-  line-height: 1.45;
-}
-
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 1.5rem 1.2rem 2.1rem;
-}
-
-header {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 1.15rem 1.2rem;
-  box-shadow: var(--shadow);
-}
-
-h1 {
-  margin: 0;
-  letter-spacing: 0.01em;
-}
-
-h2 {
-  margin: 0;
-}
-
-h3 {
-  margin: 0;
-}
-
-header p {
-  margin: 0.35rem 0 0;
-  color: var(--muted);
-}
-
-.workflow-rail {
-  margin-top: 1rem;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.8rem;
-}
-
-.workflow-step {
-  background: var(--panel-soft);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 0.75rem 0.85rem 0.82rem;
-  position: relative;
-  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
-}
-
-.workflow-step.is-complete {
-  border-color: #78c393;
-  background: linear-gradient(180deg, #eefaf2 0%, #e4f5eb 100%);
-  box-shadow: 0 8px 18px rgba(37, 132, 76, 0.12);
-}
-
-.workflow-step.is-complete::after {
-  content: "Complete";
-  position: absolute;
-  top: 0.62rem;
-  right: 0.62rem;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #1f7e47;
-  background: var(--accent-soft);
-  border: 1px solid #9dd5b0;
-  border-radius: 999px;
-  padding: 0.13rem 0.38rem;
+    radial-gradient(circle at 16% 12%, rgba(45, 151, 83, 0.11), transparent 32%),
+    radial-gradient(circle at 84% 8%, rgba(51, 120, 80, 0.1), transparent 30%),
+    linear-gradient(180deg, var(--app-bg-top) 0%, var(--app-bg-bottom) 44%);
 }
 
 .workflow-kicker {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--muted);
+  color: #4f6a59;
 }
 
-.workflow-step h3 {
-  margin: 0.2rem 0 0.22rem;
-  font-size: 1.03rem;
+.workflow-pending {
+  background: #f8faf8;
+  border-color: #dce7df !important;
 }
 
-.workflow-step p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.9rem;
+.workflow-complete {
+  background: linear-gradient(180deg, #f3fcf6 0%, #e8f7ee 100%);
+  border-color: #8fcca4 !important;
+  box-shadow: 0 10px 20px rgba(27, 117, 63, 0.1);
 }
 
-.panel {
-  margin-top: 0.95rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  box-shadow: var(--shadow);
-  padding: 1rem;
-  overflow-x: auto;
-}
-
-.step-panel {
-  padding: 1.1rem 1rem 1rem;
-}
-
-.step-head {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.75rem;
-  margin-bottom: 0.85rem;
-}
-
-.step-head > div {
-  flex: 1;
-}
-
-.step-index {
-  width: 1.9rem;
-  height: 1.9rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.95rem;
-  background: linear-gradient(180deg, #2d9a5c 0%, #1f8a4d 100%);
-  box-shadow: 0 8px 16px rgba(31, 138, 77, 0.25);
-}
-
-.step-sub {
-  margin: 0.2rem 0 0;
-  color: var(--muted);
-  font-size: 0.9rem;
-}
-
-.inline-form {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.68rem;
-  align-items: end;
-  margin-bottom: 0.9rem;
-}
-
-.inline-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.88rem;
-  color: var(--muted);
-}
-
-.inline-check {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.45rem !important;
-  background: #f4faf5;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 0.58rem 0.65rem;
-}
-
-input,
-select {
-  width: 100%;
-  padding: 0.52rem 0.56rem;
-  border-radius: 10px;
-  border: 1px solid #c8dacd;
-  background: #fff;
-  color: var(--text);
-  font: inherit;
-}
-
-input[type="checkbox"] {
-  width: auto;
-  height: 1rem;
-  padding: 0;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  accent-color: var(--accent);
-}
-
-input:focus,
-select:focus {
-  outline: none;
-  border-color: #5eb987;
-  box-shadow: 0 0 0 3px rgba(52, 156, 93, 0.2);
-}
-
-button {
-  border: 0;
-  font: inherit;
-}
-
-.run-btn {
-  background: linear-gradient(180deg, var(--accent) 0%, var(--accent-strong) 100%);
-  color: #fff;
-  border-radius: 11px;
-  min-height: 44px;
-  padding: 0.64rem 0.98rem;
-  cursor: pointer;
-  font-weight: 700;
-  letter-spacing: 0.01em;
-  box-shadow: 0 10px 20px rgba(31, 138, 77, 0.24);
-  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
-}
-
-.run-btn:hover {
-  transform: translateY(-1px);
-  filter: brightness(1.03);
-  box-shadow: 0 12px 22px rgba(21, 119, 63, 0.3);
-}
-
-.run-btn:active {
-  transform: translateY(0);
-}
-
-.run-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  box-shadow: none;
-}
-
-.toggle-step {
-  margin-left: auto;
-  border: 1px solid #bcd4c3;
-  background: #f5fbf6;
-  color: #215c39;
-  border-radius: 10px;
-  min-height: 38px;
-  padding: 0.4rem 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.toggle-step:hover {
-  background: #edf7ef;
-}
-
-.step-body.is-collapsed {
-  display: none;
-}
-
-.is-hidden {
-  display: none !important;
-}
-
-.table-action {
-  margin: 0.2rem 0 0.7rem;
-}
-
-.note {
-  color: var(--muted);
-  font-size: 0.9rem;
-  margin: 0.35rem 0 0.3rem;
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: #fff;
-}
-
-thead {
-  background: #f0f7f3;
-}
-
-th,
-td {
-  border-bottom: 1px solid var(--line);
-  text-align: left;
-  padding: 0.52rem 0.48rem;
-  vertical-align: top;
-}
-
-tbody tr:hover {
-  background: #f8fcf9;
-}
-
-a {
-  color: #0f6d3d;
-  text-decoration-thickness: 1px;
-  text-underline-offset: 2px;
-}
-
-a:hover {
-  color: #0b5e34;
-}
-
-.link-list {
-  display: flex;
-  gap: 0.55rem;
-}
-
-.cards {
-  margin-top: 0.9rem;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-}
-
-.card {
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  padding: 0.78rem 0.78rem 0.68rem;
-  background: #f8fcf9;
-}
-
-.card h2 {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.84rem;
-}
-
-.card p {
-  margin: 0.3rem 0 0;
-  font-size: 1.55rem;
-  font-weight: 700;
-  color: #164f34;
-}
-
-.two-col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.95rem;
-  margin-top: 0.88rem;
+.workflow-complete .workflow-kicker {
+  color: #1f7f46;
 }
 
 .volcano {
   width: 100%;
-  max-width: 100%;
   min-height: 460px;
-  background: #fcfefc;
-  border: 1px solid var(--line);
-  border-radius: 10px;
 }
 
-footer {
-  margin-top: 1rem;
-  color: var(--muted);
-  font-size: 0.9rem;
+.analysis-shell {
+  border-color: #d8e6dd !important;
+}
+
+.metric-card {
+  border-color: #e0ebe4;
+}
+
+.metric-card .card-body {
+  padding: 0.9rem 1rem 0.8rem;
+}
+
+.result-card {
+  border-color: #deebe3;
+}
+
+.result-card .card-header {
+  border-bottom-color: #e4eee8;
 }
 
 .sample-annotation {
@@ -387,29 +73,10 @@ footer {
 
 .sample-group-select {
   min-width: 150px;
-  width: 100%;
 }
 
-@media (max-width: 980px) {
-  .workflow-rail {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 760px) {
-  .container {
-    padding: 1rem 0.78rem 1.5rem;
-  }
-
-  .inline-form {
-    grid-template-columns: 1fr;
-  }
-
-  .two-col {
-    grid-template-columns: 1fr;
-  }
-
+@media (max-width: 768px) {
   .volcano {
-    min-height: 390px;
+    min-height: 380px;
   }
 }
