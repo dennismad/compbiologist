@@ -94,6 +94,14 @@ def _ensembl_gene_url(gene_id: str) -> str:
     return f"https://www.ensembl.org/Multi/Search/Results?q={quote_plus(gene)};site=ensembl"
 
 
+def _normalize_pathway_identifier(pathway: str) -> str:
+    text = str(pathway).strip()
+    if not text:
+        return ""
+    parts = text.split(" ", 1)[0]
+    return parts
+
+
 def _pathway_search_url(pathway_name: str) -> str:
     pathway = str(pathway_name).strip()
     if not pathway:
@@ -114,13 +122,45 @@ def _pathway_search_url(pathway_name: str) -> str:
     if wp_match:
         return f"https://www.wikipathways.org/pathways/{wp_match.group(0).upper()}.html"
 
-    if pathway.upper().startswith("KEGG:"):
-        kegg_id = pathway.split(":", 1)[1].split(" ", 1)[0].strip()
+    token = _normalize_pathway_identifier(pathway)
+    if token.upper().startswith("KEGG:"):
+        kegg_id = token.split(":", 1)[1].strip()
         if kegg_id:
             return f"https://www.kegg.jp/entry/{quote_plus(kegg_id)}"
 
     query = quote_plus(pathway)
     return f"https://reactome.org/content/query?q={query}"
+
+
+def _hydrate_top_gene_links(rows: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        if not item.get("gene_url"):
+            item["gene_url"] = _ensembl_gene_url(str(item.get("gene", "")))
+        out.append(item)
+    return out
+
+
+def _hydrate_pathway_links(rows: list[dict]) -> list[dict]:
+    out: list[dict] = []
+    for row in rows:
+        item = dict(row)
+        if not item.get("pathway_url"):
+            item["pathway_url"] = _pathway_search_url(str(item.get("pathway", "")))
+        out.append(item)
+    return out
+
+
+def hydrate_analysis_links(payload: dict | None) -> dict | None:
+    if payload is None:
+        return None
+    out = dict(payload)
+    out["top_up"] = _hydrate_top_gene_links(list(out.get("top_up", [])))
+    out["top_down"] = _hydrate_top_gene_links(list(out.get("top_down", [])))
+    out["enrichment_up"] = _hydrate_pathway_links(list(out.get("enrichment_up", [])))
+    out["enrichment_down"] = _hydrate_pathway_links(list(out.get("enrichment_down", [])))
+    return out
 
 
 def generate_differential_expression(state_profile: str, dataset_ids: list[str]) -> pd.DataFrame:
@@ -509,4 +549,5 @@ def save_analysis_outputs(result_path: Path, dge_path: Path, payload: dict) -> N
 def load_analysis_outputs(result_path: Path) -> dict | None:
     if not result_path.exists():
         return None
-    return json.loads(result_path.read_text(encoding="utf-8"))
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    return hydrate_analysis_links(payload)
