@@ -116,10 +116,12 @@
                   <label class="form-check-label" for="only-analyzable">Only analyzable datasets</label>
                 </div>
               </div>
-              <div class="col-12 col-lg-3 d-grid">
-              <button type="submit" class="btn btn-success btn-lg">Run Step 1 Search</button>
-            </div>
-          </form>
+              <div class="col-12">
+                <div class="d-flex justify-content-end">
+                  <button type="submit" class="btn btn-success btn-lg px-4">Run Step 1 Search</button>
+                </div>
+              </div>
+            </form>
 
             <p class="small text-secondary mb-2">
               Source: {{ geo_search_summary.source }} | Query: {{ geo_search_summary.query or "none" }} |
@@ -135,8 +137,9 @@
 
             {% if geo_search_items %}
               <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
-                <div class="mb-2 d-grid d-md-inline-block">
-                  <button type="submit" class="btn btn-success">Run Step 2 Load Selected</button>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                  <p class="small text-secondary mb-0">Select one or more analyzable datasets, then run Step 2.</p>
+                  <button type="submit" class="btn btn-success px-4">Run Step 2 Load Selected</button>
                 </div>
                 <div class="table-responsive rounded border">
                   <table class="table table-sm table-hover align-middle">
@@ -299,8 +302,10 @@
                   {% endfor %}
                 </select>
               </div>
-              <div class="col-12 col-lg-2 d-grid">
-                <button type="submit" class="btn btn-success btn-lg" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Step 3 Analysis</button>
+              <div class="col-12">
+                <div class="d-flex justify-content-end">
+                  <button type="submit" class="btn btn-success btn-lg px-4" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Step 3 Analysis</button>
+                </div>
               </div>
             </form>
 
@@ -382,8 +387,8 @@
                         </table>
                       </div>
 
-                      <div class="d-grid d-md-inline-block mt-2">
-                        <button type="submit" class="btn btn-success">Run Analysis With Selected Groups</button>
+                      <div class="d-flex justify-content-end mt-2">
+                        <button type="submit" class="btn btn-success px-4">Run Analysis With Selected Groups</button>
                       </div>
                     </form>
                   </div>
