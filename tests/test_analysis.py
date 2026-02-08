@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from app.analysis import _ensembl_gene_url, _pathway_search_url, hydrate_analysis_links, run_state_comparison_analysis
+from app.analysis import (
+    _annotate_top_gene_rows,
+    _ensembl_gene_url,
+    _pathway_search_url,
+    hydrate_analysis_links,
+    run_state_comparison_analysis,
+)
 
 
 def test_run_state_comparison_analysis_returns_expected_sections_prototype_mode():
@@ -263,5 +269,43 @@ def test_hydrate_analysis_links_backfills_missing_gene_and_pathway_urls():
     assert out is not None
     assert out["top_up"][0]["gene_url"] == "https://www.ensembl.org/id/ENSG00000141510"
     assert "https://www.ensembl.org/Multi/Search/Results" in out["top_down"][0]["gene_url"]
+    assert out["top_up"][0]["gene_symbol"] == "ENSG00000141510"
+    assert out["top_up"][0]["gene_name"] == ""
+    assert out["top_down"][0]["gene_symbol"] == "TP53"
     assert out["enrichment_up"][0]["pathway_url"] == "https://www.ebi.ac.uk/QuickGO/term/GO:0006954"
     assert out["enrichment_down"][0]["pathway_url"] == "https://reactome.org/content/detail/R-HSA-9031628"
+
+
+def test_annotate_top_gene_rows_applies_fetched_ensembl_metadata(monkeypatch):
+    monkeypatch.setenv("COMPBIO_FORCE_REMOTE_GENE_LOOKUP", "1")
+    monkeypatch.setattr("app.analysis._load_gene_info_cache", lambda: {})
+
+    written: dict = {}
+
+    def _capture(entries, cache_path=None):
+        written.update(entries)
+
+    monkeypatch.setattr("app.analysis._write_gene_info_cache", _capture)
+    monkeypatch.setattr(
+        "app.analysis._fetch_ensembl_gene_annotations",
+        lambda ensembl_ids, timeout_s=10.0: {
+            "ENSG00000141510": {
+                "ensembl_id": "ENSG00000141510",
+                "gene_symbol": "TP53",
+                "gene_name": "tumor protein p53",
+                "gene_biotype": "protein_coding",
+            }
+        },
+    )
+
+    rows, note = _annotate_top_gene_rows(
+        [{"gene": "ENSG00000141510.18", "log2fc": 1.2, "padj": 0.01}],
+        allow_remote_lookup=True,
+    )
+
+    assert note is None
+    assert rows[0]["gene_symbol"] == "TP53"
+    assert rows[0]["gene_name"] == "tumor protein p53"
+    assert rows[0]["gene_biotype"] == "protein_coding"
+    assert rows[0]["gene_url"] == "https://www.ensembl.org/id/ENSG00000141510"
+    assert "ENSG00000141510" in written

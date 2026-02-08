@@ -3,14 +3,16 @@ from __future__ import annotations
 import hashlib
 import json
 import math
+import os
 import random
 from pathlib import Path
 from urllib.parse import quote_plus
 import re
 
 import pandas as pd
+import requests
 
-from app.config import GEO_MATRIX_CACHE_DIR
+from app.config import GENE_INFO_CACHE_PATH, GEO_MATRIX_CACHE_DIR
 from app.enrichment import infer_gprofiler_organism, run_gprofiler_enrichment
 from app.geo_expression import build_group_choice_context, run_real_geo_de
 
@@ -94,6 +96,130 @@ def _ensembl_gene_url(gene_id: str) -> str:
     return f"https://www.ensembl.org/Multi/Search/Results?q={quote_plus(gene)};site=ensembl"
 
 
+def _normalize_ensembl_gene_id(gene_id: str) -> str:
+    gene = str(gene_id).strip()
+    if not gene:
+        return ""
+    if re.match(r"^ENS[A-Z0-9]+(?:\.\d+)?$", gene, flags=re.IGNORECASE):
+        return gene.split(".", 1)[0].upper()
+    return ""
+
+
+def _clean_gene_description(raw: str) -> str:
+    text = str(raw or "").strip()
+    if not text:
+        return ""
+    return re.sub(r"\s*\[Source:.*?\]\s*$", "", text).strip()
+
+
+def _load_gene_info_cache(cache_path: Path | None = None) -> dict[str, dict]:
+    path = cache_path or GENE_INFO_CACHE_PATH
+    if not path.exists():
+        return {}
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    entries = payload.get("entries", {})
+    if isinstance(entries, dict):
+        return entries
+    return {}
+
+
+def _write_gene_info_cache(entries: dict[str, dict], cache_path: Path | None = None) -> None:
+    path = cache_path or GENE_INFO_CACHE_PATH
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {"entries": entries}
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _fetch_ensembl_gene_annotations(ensembl_ids: list[str], timeout_s: float = 10.0) -> dict[str, dict]:
+    if not ensembl_ids:
+        return {}
+    endpoint = "https://rest.ensembl.org/lookup/id"
+    try:
+        response = requests.post(
+            endpoint,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            json={"ids": ensembl_ids, "expand": False},
+            timeout=timeout_s,
+        )
+        response.raise_for_status()
+        payload = response.json()
+    except Exception:
+        return {}
+
+    if not isinstance(payload, dict):
+        return {}
+
+    out: dict[str, dict] = {}
+    for raw_id in ensembl_ids:
+        rec = payload.get(raw_id)
+        if not isinstance(rec, dict):
+            continue
+        resolved_id = _normalize_ensembl_gene_id(str(rec.get("id", "")).strip()) or raw_id
+        symbol = str(rec.get("display_name", "")).strip() or resolved_id
+        out[raw_id] = {
+            "ensembl_id": resolved_id,
+            "gene_symbol": symbol,
+            "gene_name": _clean_gene_description(rec.get("description", "")),
+            "gene_biotype": str(rec.get("biotype", "")).strip(),
+        }
+    return out
+
+
+def _annotate_top_gene_rows(rows: list[dict], allow_remote_lookup: bool) -> tuple[list[dict], str | None]:
+    out_rows = [dict(row) for row in rows]
+    ens_ids = sorted(
+        {
+            _normalize_ensembl_gene_id(str(row.get("gene", "")))
+            for row in out_rows
+            if _normalize_ensembl_gene_id(str(row.get("gene", "")))
+        }
+    )
+
+    cache_entries = _load_gene_info_cache()
+    missing = [gene_id for gene_id in ens_ids if gene_id not in cache_entries]
+
+    allow_remote_in_tests = os.getenv("COMPBIO_FORCE_REMOTE_GENE_LOOKUP", "").strip() == "1"
+    if allow_remote_lookup and missing and (allow_remote_in_tests or not os.getenv("PYTEST_CURRENT_TEST")):
+        fetched = _fetch_ensembl_gene_annotations(missing)
+        for key in missing:
+            cache_entries[key] = fetched.get(
+                key,
+                {
+                    "ensembl_id": key,
+                    "gene_symbol": key,
+                    "gene_name": "",
+                    "gene_biotype": "",
+                },
+            )
+        _write_gene_info_cache(cache_entries)
+
+    missing_annotations = 0
+    for row in out_rows:
+        gene_raw = str(row.get("gene", "")).strip()
+        ens_id = _normalize_ensembl_gene_id(gene_raw)
+        cached = cache_entries.get(ens_id, {}) if ens_id else {}
+        gene_symbol = str(cached.get("gene_symbol", "")).strip() if cached else ""
+        gene_name = str(cached.get("gene_name", "")).strip() if cached else ""
+        gene_biotype = str(cached.get("gene_biotype", "")).strip() if cached else ""
+
+        if ens_id and not cached:
+            missing_annotations += 1
+
+        row["gene_symbol"] = gene_symbol or gene_raw
+        row["gene_name"] = gene_name
+        row["gene_biotype"] = gene_biotype
+        if not row.get("gene_url"):
+            row["gene_url"] = _ensembl_gene_url(cached.get("ensembl_id", gene_raw) if ens_id else gene_raw)
+
+    note: str | None = None
+    if allow_remote_lookup and ens_ids and missing_annotations:
+        note = f"Gene annotation lookup unavailable for {missing_annotations} Ensembl IDs."
+    return out_rows, note
+
+
 def _normalize_pathway_identifier(pathway: str) -> str:
     text = str(pathway).strip()
     if not text:
@@ -156,8 +282,12 @@ def hydrate_analysis_links(payload: dict | None) -> dict | None:
     if payload is None:
         return None
     out = dict(payload)
-    out["top_up"] = _hydrate_top_gene_links(list(out.get("top_up", [])))
-    out["top_down"] = _hydrate_top_gene_links(list(out.get("top_down", [])))
+    top_up = _hydrate_top_gene_links(list(out.get("top_up", [])))
+    top_down = _hydrate_top_gene_links(list(out.get("top_down", [])))
+    top_up, _ = _annotate_top_gene_rows(top_up, allow_remote_lookup=True)
+    top_down, _ = _annotate_top_gene_rows(top_down, allow_remote_lookup=True)
+    out["top_up"] = top_up
+    out["top_down"] = top_down
     out["enrichment_up"] = _hydrate_pathway_links(list(out.get("enrichment_up", [])))
     out["enrichment_down"] = _hydrate_pathway_links(list(out.get("enrichment_down", [])))
     return out
@@ -476,6 +606,12 @@ def run_state_comparison_analysis(
         [["gene", "gene_url", "log2fc", "padj"]]
         .to_dict(orient="records")
     )
+    top_up, gene_info_note_up = _annotate_top_gene_rows(top_up, allow_remote_lookup=True)
+    top_down, gene_info_note_down = _annotate_top_gene_rows(top_down, allow_remote_lookup=True)
+    if gene_info_note_up:
+        notes.append(gene_info_note_up)
+    if gene_info_note_down:
+        notes.append(gene_info_note_down)
 
     organism = infer_gprofiler_organism(loaded_items)
     enrichment_up, enrich_note_up = run_enrichment(

@@ -20,6 +20,7 @@ GEO_SAMPLE_PATH = BASE_DIR / "app" / "sample_data" / "geo_sample.json"
 
 ANALYSIS_RESULT_PATH = DATA_DIR / "processed" / "analysis_result.json"
 ANALYSIS_DGE_PATH = DATA_DIR / "processed" / "analysis_dge.csv"
+GENE_INFO_CACHE_PATH = DATA_DIR / "processed" / "gene_info_cache.json"
 
 UNIPROT_ENDPOINT = "https://rest.uniprot.org/uniprotkb/search"
 DEFAULT_QUERY = "reviewed:true AND organism_id:9606 AND keyword:KW-0418"

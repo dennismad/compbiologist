@@ -435,17 +435,22 @@
                         <div class="card-body p-0">
                           <div class="table-responsive">
                             <table class="table table-sm table-hover align-middle mb-0">
-                              <thead class="table-light"><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                              <thead class="table-light"><tr><th>Gene</th><th>Name</th><th>log2FC</th><th>padj</th></tr></thead>
                               <tbody>
                                 {% for row in analysis.top_up %}
                                   <tr>
-                                    <td>{% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>{% else %}{{ row.gene }}{% endif %}</td>
+                                    <td>
+                                      {% set gene_label = row.gene_symbol if row.gene_symbol else row.gene %}
+                                      {% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ gene_label }}</a>{% else %}{{ gene_label }}{% endif %}
+                                      {% if row.gene and row.gene != gene_label %}<div class="gene-subid text-secondary">{{ row.gene }}</div>{% endif %}
+                                    </td>
+                                    <td class="gene-name-cell" title="{{ row.gene_name if row.gene_name else '' }}">{{ row.gene_name if row.gene_name else '—' }}</td>
                                     <td>{{ '%.2f'|format(row.log2fc) }}</td>
                                     <td>{{ '%.3g'|format(row.padj) }}</td>
                                   </tr>
                                 {% endfor %}
                                 {% if not analysis.top_up %}
-                                  <tr><td colspan="3" class="text-secondary small">No genes passed thresholds.</td></tr>
+                                  <tr><td colspan="4" class="text-secondary small">No genes passed thresholds.</td></tr>
                                 {% endif %}
                               </tbody>
                             </table>
@@ -459,17 +464,22 @@
                         <div class="card-body p-0">
                           <div class="table-responsive">
                             <table class="table table-sm table-hover align-middle mb-0">
-                              <thead class="table-light"><tr><th>Gene</th><th>log2FC</th><th>padj</th></tr></thead>
+                              <thead class="table-light"><tr><th>Gene</th><th>Name</th><th>log2FC</th><th>padj</th></tr></thead>
                               <tbody>
                                 {% for row in analysis.top_down %}
                                   <tr>
-                                    <td>{% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ row.gene }}</a>{% else %}{{ row.gene }}{% endif %}</td>
+                                    <td>
+                                      {% set gene_label = row.gene_symbol if row.gene_symbol else row.gene %}
+                                      {% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ gene_label }}</a>{% else %}{{ gene_label }}{% endif %}
+                                      {% if row.gene and row.gene != gene_label %}<div class="gene-subid text-secondary">{{ row.gene }}</div>{% endif %}
+                                    </td>
+                                    <td class="gene-name-cell" title="{{ row.gene_name if row.gene_name else '' }}">{{ row.gene_name if row.gene_name else '—' }}</td>
                                     <td>{{ '%.2f'|format(row.log2fc) }}</td>
                                     <td>{{ '%.3g'|format(row.padj) }}</td>
                                   </tr>
                                 {% endfor %}
                                 {% if not analysis.top_down %}
-                                  <tr><td colspan="3" class="text-secondary small">No genes passed thresholds.</td></tr>
+                                  <tr><td colspan="4" class="text-secondary small">No genes passed thresholds.</td></tr>
                                 {% endif %}
                               </tbody>
                             </table>

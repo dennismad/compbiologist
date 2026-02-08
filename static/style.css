@@ -90,6 +90,19 @@ body {
   white-space: nowrap;
 }
 
+.gene-subid {
+  font-size: 0.78rem;
+  line-height: 1.2;
+}
+
+.gene-name-cell {
+  max-width: 340px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  font-size: 0.88rem;
+  line-height: 1.25;
+}
+
 @media (max-width: 768px) {
   .volcano {
     min-height: 380px;
