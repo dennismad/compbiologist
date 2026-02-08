@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from app.analysis import run_state_comparison_analysis
+from app.analysis import _ensembl_gene_url, _pathway_search_url, run_state_comparison_analysis
 
 
 def test_run_state_comparison_analysis_returns_expected_sections_prototype_mode():
@@ -225,3 +225,25 @@ def test_analysis_gprofiler_only_mode_does_not_fallback(monkeypatch):
     assert result["metadata"]["enrichment_mode"] == "gprofiler"
     assert result["enrichment_up"] == []
     assert any("gprofiler unavailable for test" in note for note in result["metadata"]["notes"])
+
+
+def test_ensembl_gene_url_strips_ensembl_version_suffix():
+    url = _ensembl_gene_url("ENSG00000141510.18")
+    assert url == "https://www.ensembl.org/id/ENSG00000141510"
+
+
+def test_ensembl_gene_url_searches_non_ensembl_ids():
+    url = _ensembl_gene_url("TP53")
+    assert "https://www.ensembl.org/Multi/Search/Results" in url
+    assert "TP53" in url
+
+
+def test_pathway_search_url_supports_go_reactome_wp_and_kegg():
+    assert _pathway_search_url("GO:BP:GO:0006954 inflammatory response") == "https://www.ebi.ac.uk/QuickGO/term/GO:0006954"
+    assert _pathway_search_url("REAC:R-HSA-168256 Immune System") == "https://reactome.org/content/detail/R-HSA-168256"
+    assert _pathway_search_url("WP:WP554 DNA damage response") == "https://www.wikipathways.org/pathways/WP554.html"
+    assert _pathway_search_url("KEGG:hsa04110 Cell cycle") == "https://www.kegg.jp/entry/hsa04110"
+
+
+def test_pathway_search_url_uses_curated_local_pathway_links():
+    assert _pathway_search_url("Inflammatory_Response") == "https://www.ebi.ac.uk/QuickGO/term/GO:0006954"

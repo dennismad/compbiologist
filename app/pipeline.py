@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from app.analysis import load_analysis_outputs, run_state_comparison_analysis, save_analysis_outputs
 from app.config import (
@@ -282,3 +283,21 @@ def load_cached_loaded_geo_payload() -> dict:
 
 def load_cached_analysis_payload() -> dict | None:
     return load_analysis_outputs(ANALYSIS_RESULT_PATH)
+
+
+def reset_workflow_state() -> None:
+    targets: list[Path] = [
+        GEO_RAW_JSON_PATH,
+        GEO_PROCESSED_PATH,
+        GEO_SUMMARY_PATH,
+        GEO_LOADED_JSON_PATH,
+        GEO_LOADED_CSV_PATH,
+        ANALYSIS_RESULT_PATH,
+        ANALYSIS_DGE_PATH,
+    ]
+    for path in targets:
+        try:
+            if path.exists():
+                path.unlink()
+        except Exception:
+            continue

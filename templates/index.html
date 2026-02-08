@@ -15,9 +15,16 @@
       {% set has_analysis = analysis and analysis.metadata.n_genes > 0 %}
 
       <header class="card shadow-sm border-0 mb-4">
-        <div class="card-body">
-          <h1 class="h3 mb-2">Virtual Computational Biologist</h1>
-          <p class="text-secondary mb-0">Run the workflow in order: search GEO, load datasets, then run comparison analysis.</p>
+        <div class="card-body d-flex flex-column flex-lg-row justify-content-between gap-3">
+          <div>
+            <h1 class="h3 mb-2">Virtual Computational Biologist</h1>
+            <p class="text-secondary mb-0">Run the workflow in order: search GEO, load datasets, then run comparison analysis.</p>
+          </div>
+          <div class="d-grid d-lg-block">
+            <form action="{{ url_for('workflow_reset') }}" method="post" data-preserve-scroll="true">
+              <button type="submit" class="btn btn-outline-danger">Start From Scratch</button>
+            </form>
+          </div>
         </div>
       </header>
 
@@ -136,11 +143,8 @@
             {% endif %}
 
             {% if geo_search_items %}
-              <form action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
-                  <p class="small text-secondary mb-0">Select one or more analyzable datasets, then run Step 2.</p>
-                  <button type="submit" class="btn btn-success px-4">Run Step 2 Load Selected</button>
-                </div>
+              <form id="geo-load-form" action="{{ url_for('geo_load_selected') }}" method="post" data-preserve-scroll="true">
+                <p class="small text-secondary mb-2">Select one or more analyzable datasets here, then go to Step 2 and run load.</p>
                 <div class="table-responsive rounded border">
                   <table class="table table-sm table-hover align-middle">
                     <thead class="table-light">
@@ -219,6 +223,10 @@
               Loaded: {{ geo_loaded_summary.returned }} | Query: {{ geo_loaded_summary.query or "none" }} |
               State filter: {{ geo_loaded_summary.state_filter }}
             </p>
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+              <p class="small text-secondary mb-0">Run Step 2 to load the currently selected rows from Step 1.</p>
+              <button type="submit" form="geo-load-form" class="btn btn-success px-4" {% if not geo_search_items %}disabled{% endif %}>Run Step 2 Load Selected</button>
+            </div>
 
             {% if geo_loaded_items %}
               <div class="table-responsive rounded border">

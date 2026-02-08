@@ -139,3 +139,23 @@ def test_run_geo_pipeline_overfetches_for_analyzable(monkeypatch):
     assert len(out["items"]) == 3
     assert [x["accession"] for x in out["items"]] == ["GSE2", "GSE3", "GSE4"]
     assert calls == [0, 50]
+
+
+def test_reset_workflow_state_removes_cached_files(monkeypatch, tmp_path):
+    targets = {
+        "GEO_RAW_JSON_PATH": tmp_path / "geo_last_search.json",
+        "GEO_PROCESSED_PATH": tmp_path / "geo_datasets.csv",
+        "GEO_SUMMARY_PATH": tmp_path / "geo_summary.json",
+        "GEO_LOADED_JSON_PATH": tmp_path / "geo_loaded.json",
+        "GEO_LOADED_CSV_PATH": tmp_path / "geo_loaded.csv",
+        "ANALYSIS_RESULT_PATH": tmp_path / "analysis_result.json",
+        "ANALYSIS_DGE_PATH": tmp_path / "analysis_dge.csv",
+    }
+
+    for attr, path in targets.items():
+        path.write_text("x", encoding="utf-8")
+        monkeypatch.setattr(pipeline, attr, path)
+
+    pipeline.reset_workflow_state()
+
+    assert all(not path.exists() for path in targets.values())

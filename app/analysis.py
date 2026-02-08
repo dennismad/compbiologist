@@ -6,6 +6,7 @@ import math
 import random
 from pathlib import Path
 from urllib.parse import quote_plus
+import re
 
 import pandas as pd
 
@@ -36,6 +37,17 @@ PATHWAYS = {
     "EMT_Extracellular_Matrix": {"VIM", "CDH2", "CDH1", "MMP2", "MMP9", "COL1A1", "COL3A1"},
     "Immune_Checkpoint": {"PDCD1", "CD274", "CTLA4", "LAG3", "TIGIT", "CD3D", "CD8A"},
     "Hypoxia_Angiogenesis": {"HIF1A", "VEGFA", "KDR", "LDHA", "ENO1"},
+}
+
+LOCAL_PATHWAY_URLS = {
+    "Inflammatory_Response": "https://www.ebi.ac.uk/QuickGO/term/GO:0006954",
+    "Interferon_Signaling": "https://reactome.org/content/query?q=Interferon%20Signaling",
+    "Cell_Cycle_Proliferation": "https://reactome.org/content/query?q=Cell%20Cycle",
+    "Apoptosis": "https://reactome.org/content/query?q=Apoptosis",
+    "PI3K_AKT_MTOR": "https://reactome.org/content/query?q=PI3K%20AKT%20mTOR%20signaling",
+    "EMT_Extracellular_Matrix": "https://reactome.org/content/query?q=Extracellular%20matrix%20organization",
+    "Immune_Checkpoint": "https://reactome.org/content/query?q=PD-1%20signaling",
+    "Hypoxia_Angiogenesis": "https://reactome.org/content/query?q=HIF-1%20signaling",
 }
 
 STATE_SIGNAL_GENES = {
@@ -76,15 +88,38 @@ def _ensembl_gene_url(gene_id: str) -> str:
     gene = str(gene_id).strip()
     if not gene:
         return ""
-    if gene.upper().startswith("ENS"):
+    if re.match(r"^ENS[A-Z0-9]+(?:\.\d+)?$", gene, flags=re.IGNORECASE):
+        gene = gene.split(".", 1)[0]
         return f"https://www.ensembl.org/id/{quote_plus(gene)}"
     return f"https://www.ensembl.org/Multi/Search/Results?q={quote_plus(gene)};site=ensembl"
 
 
 def _pathway_search_url(pathway_name: str) -> str:
-    query = quote_plus(str(pathway_name).strip())
-    if not query:
+    pathway = str(pathway_name).strip()
+    if not pathway:
         return ""
+
+    if pathway in LOCAL_PATHWAY_URLS:
+        return LOCAL_PATHWAY_URLS[pathway]
+
+    go_match = re.search(r"\bGO:\d{7}\b", pathway, flags=re.IGNORECASE)
+    if go_match:
+        return f"https://www.ebi.ac.uk/QuickGO/term/{go_match.group(0).upper()}"
+
+    reactome_match = re.search(r"\bR-[A-Z]{3}-\d+\b", pathway, flags=re.IGNORECASE)
+    if reactome_match:
+        return f"https://reactome.org/content/detail/{reactome_match.group(0).upper()}"
+
+    wp_match = re.search(r"\bWP\d+\b", pathway, flags=re.IGNORECASE)
+    if wp_match:
+        return f"https://www.wikipathways.org/pathways/{wp_match.group(0).upper()}.html"
+
+    if pathway.upper().startswith("KEGG:"):
+        kegg_id = pathway.split(":", 1)[1].split(" ", 1)[0].strip()
+        if kegg_id:
+            return f"https://www.kegg.jp/entry/{quote_plus(kegg_id)}"
+
+    query = quote_plus(pathway)
     return f"https://reactome.org/content/query?q={query}"
 
 

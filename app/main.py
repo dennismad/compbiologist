@@ -13,6 +13,7 @@ from app.pipeline import (
     load_cached_geo_payload,
     load_cached_loaded_geo_payload,
     load_cached_summary,
+    reset_workflow_state,
     run_comparison_analysis,
     run_geo_load_selection,
     run_geo_pipeline,
@@ -82,6 +83,11 @@ def create_app() -> Flask:
     @app.post("/refresh")
     def refresh():
         run_pipeline()
+        return redirect(url_for("index"))
+
+    @app.post("/workflow/reset")
+    def workflow_reset():
+        reset_workflow_state()
         return redirect(url_for("index"))
 
     @app.post("/geo/search")
