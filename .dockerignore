@@ -1,0 +1,17 @@
+.git
+.gitignore
+.venv
+.pytest_cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.swp
+*.swo
+
+# Local data and large local metadata DB are mounted as volumes in production.
+data
+GEOmetadb.sqlite
+
+tests
+pytest.ini

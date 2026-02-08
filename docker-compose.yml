@@ -1,0 +1,16 @@
+services:
+  compbiologist:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: compbiologist:latest
+    container_name: compbiologist
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - NCBI_API_KEY=${NCBI_API_KEY:-}
+      - NCBI_EMAIL=${NCBI_EMAIL:-}
+    volumes:
+      - ./data:/app/data
+      - ./GEOmetadb.sqlite:/app/GEOmetadb.sqlite:ro
