@@ -75,6 +75,21 @@ body {
   min-width: 150px;
 }
 
+.btn-run-step {
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.run-action-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4f6a59;
+  white-space: nowrap;
+}
+
 @media (max-width: 768px) {
   .volcano {
     min-height: 380px;

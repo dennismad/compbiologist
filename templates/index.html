@@ -124,8 +124,9 @@
                 </div>
               </div>
               <div class="col-12">
-                <div class="d-flex justify-content-end">
-                  <button type="submit" class="btn btn-success btn-lg px-4">Run Step 1 Search</button>
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                  <span class="run-action-label">Step 1</span>
+                  <button type="submit" class="btn btn-success btn-run-step px-4">Run Search</button>
                 </div>
               </div>
             </form>
@@ -225,7 +226,10 @@
             </p>
             <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
               <p class="small text-secondary mb-0">Run Step 2 to load the currently selected rows from Step 1.</p>
-              <button type="submit" form="geo-load-form" class="btn btn-success px-4" {% if not geo_search_items %}disabled{% endif %}>Run Step 2 Load Selected</button>
+              <div class="d-flex align-items-center gap-2">
+                <span class="run-action-label">Step 2</span>
+                <button type="submit" form="geo-load-form" class="btn btn-success btn-run-step px-4" {% if not geo_search_items %}disabled{% endif %}>Run Load Selected</button>
+              </div>
             </div>
 
             {% if geo_loaded_items %}
@@ -311,8 +315,9 @@
                 </select>
               </div>
               <div class="col-12">
-                <div class="d-flex justify-content-end">
-                  <button type="submit" class="btn btn-success btn-lg px-4" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Step 3 Analysis</button>
+                <div class="d-flex justify-content-end align-items-center gap-2">
+                  <span class="run-action-label">Step 3</span>
+                  <button type="submit" class="btn btn-success btn-run-step px-4" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Analysis</button>
                 </div>
               </div>
             </form>
