@@ -284,6 +284,7 @@
         </div>
         <div class="collapse show" id="analysis-body">
           <div class="card-body">
+            {% set manual_mode_active = analysis and analysis.metadata.mode == "needs_group_selection" and analysis.group_choice %}
             <form action="{{ url_for('run_analysis') }}" method="post" class="row g-3 align-items-end" data-preserve-scroll="true">
               <div class="col-12 col-md-6 col-lg-3">
                 <label class="form-label">Comparison State</label>
@@ -315,10 +316,14 @@
                 </select>
               </div>
               <div class="col-12">
-                <div class="d-flex justify-content-end align-items-center gap-2">
-                  <span class="run-action-label">Step 3</span>
-                  <button type="submit" class="btn btn-success btn-run-step px-4" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Analysis</button>
-                </div>
+                {% if manual_mode_active %}
+                  <p class="small text-secondary mb-0">Manual grouping is active below. Use the single run button in that section.</p>
+                {% else %}
+                  <div class="d-flex justify-content-end align-items-center gap-2">
+                    <span class="run-action-label">Step 3</span>
+                    <button type="submit" class="btn btn-success btn-run-step px-4" {% if geo_loaded_summary.returned == 0 %}disabled{% endif %}>Run Analysis</button>
+                  </div>
+                {% endif %}
               </div>
             </form>
 
@@ -401,7 +406,7 @@
                       </div>
 
                       <div class="d-flex justify-content-end mt-2">
-                        <button type="submit" class="btn btn-success px-4">Run Analysis With Selected Groups</button>
+                        <button type="submit" class="btn btn-success btn-run-step px-4">Run Analysis</button>
                       </div>
                     </form>
                   </div>

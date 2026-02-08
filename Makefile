@@ -3,7 +3,7 @@ ifeq ($(wildcard $(PYTHON)),)
 PYTHON := python3
 endif
 
-.PHONY: venv install run refresh test check
+.PHONY: venv install run refresh test check docker-up docker-down docker-logs
 
 venv:
 	$(PYTHON) -m venv .venv
@@ -22,3 +22,12 @@ test:
 
 check:
 	$(PYTHON) -m compileall app tests templates static
+
+docker-up:
+	docker compose up -d --build
+
+docker-down:
+	docker compose down
+
+docker-logs:
+	docker compose logs -f compbiologist
