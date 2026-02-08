@@ -121,9 +121,22 @@ def _load_gene_info_cache(cache_path: Path | None = None) -> dict[str, dict]:
     except Exception:
         return {}
     entries = payload.get("entries", {})
-    if isinstance(entries, dict):
-        return entries
-    return {}
+    if not isinstance(entries, dict):
+        return {}
+
+    # Drop unresolved placeholders from older cache writes so future runs can retry lookup.
+    filtered: dict[str, dict] = {}
+    for key, value in entries.items():
+        if not isinstance(value, dict):
+            continue
+        ens_id = str(value.get("ensembl_id", key)).strip().upper()
+        symbol = str(value.get("gene_symbol", "")).strip()
+        name = str(value.get("gene_name", "")).strip()
+        biotype = str(value.get("gene_biotype", "")).strip()
+        if ens_id and symbol == ens_id and not name and not biotype:
+            continue
+        filtered[key] = value
+    return filtered
 
 
 def _write_gene_info_cache(entries: dict[str, dict], cache_path: Path | None = None) -> None:
@@ -137,34 +150,54 @@ def _fetch_ensembl_gene_annotations(ensembl_ids: list[str], timeout_s: float = 1
     if not ensembl_ids:
         return {}
     endpoint = "https://rest.ensembl.org/lookup/id"
+    payload: dict | None = None
     try:
         response = requests.post(
             endpoint,
             headers={"Accept": "application/json", "Content-Type": "application/json"},
-            json={"ids": ensembl_ids, "expand": False},
+            json={"ids": ensembl_ids},
             timeout=timeout_s,
         )
         response.raise_for_status()
-        payload = response.json()
+        parsed = response.json()
+        if isinstance(parsed, dict):
+            payload = parsed
     except Exception:
-        return {}
-
-    if not isinstance(payload, dict):
-        return {}
+        payload = None
 
     out: dict[str, dict] = {}
-    for raw_id in ensembl_ids:
-        rec = payload.get(raw_id)
-        if not isinstance(rec, dict):
-            continue
-        resolved_id = _normalize_ensembl_gene_id(str(rec.get("id", "")).strip()) or raw_id
+
+    def _extract_from_record(input_id: str, rec: dict) -> None:
+        resolved_id = _normalize_ensembl_gene_id(str(rec.get("id", "")).strip()) or input_id
         symbol = str(rec.get("display_name", "")).strip() or resolved_id
-        out[raw_id] = {
+        out[input_id] = {
             "ensembl_id": resolved_id,
             "gene_symbol": symbol,
             "gene_name": _clean_gene_description(rec.get("description", "")),
             "gene_biotype": str(rec.get("biotype", "")).strip(),
         }
+
+    if isinstance(payload, dict):
+        for raw_id in ensembl_ids:
+            rec = payload.get(raw_id)
+            if isinstance(rec, dict):
+                _extract_from_record(raw_id, rec)
+
+    # Fallback: per-ID lookup endpoint is slower but more reliable across Ensembl API variations.
+    missing = [x for x in ensembl_ids if x not in out]
+    for gene_id in missing:
+        try:
+            response = requests.get(
+                f"https://rest.ensembl.org/lookup/id/{gene_id}",
+                headers={"Accept": "application/json"},
+                timeout=max(3.0, timeout_s / 2),
+            )
+            response.raise_for_status()
+            rec = response.json()
+            if isinstance(rec, dict):
+                _extract_from_record(gene_id, rec)
+        except Exception:
+            continue
     return out
 
 
@@ -184,17 +217,10 @@ def _annotate_top_gene_rows(rows: list[dict], allow_remote_lookup: bool) -> tupl
     allow_remote_in_tests = os.getenv("COMPBIO_FORCE_REMOTE_GENE_LOOKUP", "").strip() == "1"
     if allow_remote_lookup and missing and (allow_remote_in_tests or not os.getenv("PYTEST_CURRENT_TEST")):
         fetched = _fetch_ensembl_gene_annotations(missing)
-        for key in missing:
-            cache_entries[key] = fetched.get(
-                key,
-                {
-                    "ensembl_id": key,
-                    "gene_symbol": key,
-                    "gene_name": "",
-                    "gene_biotype": "",
-                },
-            )
-        _write_gene_info_cache(cache_entries)
+        if fetched:
+            for key, value in fetched.items():
+                cache_entries[key] = value
+            _write_gene_info_cache(cache_entries)
 
     missing_annotations = 0
     for row in out_rows:
@@ -215,7 +241,7 @@ def _annotate_top_gene_rows(rows: list[dict], allow_remote_lookup: bool) -> tupl
             row["gene_url"] = _ensembl_gene_url(cached.get("ensembl_id", gene_raw) if ens_id else gene_raw)
 
     note: str | None = None
-    if allow_remote_lookup and ens_ids and missing_annotations:
+    if ens_ids and missing_annotations:
         note = f"Gene annotation lookup unavailable for {missing_annotations} Ensembl IDs."
     return out_rows, note
 
@@ -284,8 +310,8 @@ def hydrate_analysis_links(payload: dict | None) -> dict | None:
     out = dict(payload)
     top_up = _hydrate_top_gene_links(list(out.get("top_up", [])))
     top_down = _hydrate_top_gene_links(list(out.get("top_down", [])))
-    top_up, _ = _annotate_top_gene_rows(top_up, allow_remote_lookup=True)
-    top_down, _ = _annotate_top_gene_rows(top_down, allow_remote_lookup=True)
+    top_up, _ = _annotate_top_gene_rows(top_up, allow_remote_lookup=False)
+    top_down, _ = _annotate_top_gene_rows(top_down, allow_remote_lookup=False)
     out["top_up"] = top_up
     out["top_down"] = top_down
     out["enrichment_up"] = _hydrate_pathway_links(list(out.get("enrichment_up", [])))

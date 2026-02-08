@@ -444,7 +444,8 @@
                                       {% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ gene_label }}</a>{% else %}{{ gene_label }}{% endif %}
                                       {% if row.gene and row.gene != gene_label %}<div class="gene-subid text-secondary">{{ row.gene }}</div>{% endif %}
                                     </td>
-                                    <td class="gene-name-cell" title="{{ row.gene_name if row.gene_name else '' }}">{{ row.gene_name if row.gene_name else '—' }}</td>
+                                    {% set gene_name_label = row.gene_name if row.gene_name else (row.gene_symbol if row.gene_symbol else '—') %}
+                                    <td class="gene-name-cell" title="{{ gene_name_label if gene_name_label != '—' else '' }}">{{ gene_name_label }}</td>
                                     <td>{{ '%.2f'|format(row.log2fc) }}</td>
                                     <td>{{ '%.3g'|format(row.padj) }}</td>
                                   </tr>
@@ -473,7 +474,8 @@
                                       {% if row.gene_url %}<a href="{{ row.gene_url }}" target="_blank" rel="noopener noreferrer">{{ gene_label }}</a>{% else %}{{ gene_label }}{% endif %}
                                       {% if row.gene and row.gene != gene_label %}<div class="gene-subid text-secondary">{{ row.gene }}</div>{% endif %}
                                     </td>
-                                    <td class="gene-name-cell" title="{{ row.gene_name if row.gene_name else '' }}">{{ row.gene_name if row.gene_name else '—' }}</td>
+                                    {% set gene_name_label = row.gene_name if row.gene_name else (row.gene_symbol if row.gene_symbol else '—') %}
+                                    <td class="gene-name-cell" title="{{ gene_name_label if gene_name_label != '—' else '' }}">{{ gene_name_label }}</td>
                                     <td>{{ '%.2f'|format(row.log2fc) }}</td>
                                     <td>{{ '%.3g'|format(row.padj) }}</td>
                                   </tr>

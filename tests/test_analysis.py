@@ -3,6 +3,7 @@ from __future__ import annotations
 from app.analysis import (
     _annotate_top_gene_rows,
     _ensembl_gene_url,
+    _load_gene_info_cache,
     _pathway_search_url,
     hydrate_analysis_links,
     run_state_comparison_analysis,
@@ -309,3 +310,35 @@ def test_annotate_top_gene_rows_applies_fetched_ensembl_metadata(monkeypatch):
     assert rows[0]["gene_biotype"] == "protein_coding"
     assert rows[0]["gene_url"] == "https://www.ensembl.org/id/ENSG00000141510"
     assert "ENSG00000141510" in written
+
+
+def test_annotate_top_gene_rows_reports_missing_when_lookup_fails(monkeypatch):
+    monkeypatch.setenv("COMPBIO_FORCE_REMOTE_GENE_LOOKUP", "1")
+    monkeypatch.setattr("app.analysis._load_gene_info_cache", lambda: {})
+    monkeypatch.setattr("app.analysis._fetch_ensembl_gene_annotations", lambda ensembl_ids, timeout_s=10.0: {})
+
+    rows, note = _annotate_top_gene_rows(
+        [{"gene": "ENSG00000141510", "log2fc": 1.2, "padj": 0.01}],
+        allow_remote_lookup=True,
+    )
+
+    assert rows[0]["gene_symbol"] == "ENSG00000141510"
+    assert rows[0]["gene_name"] == ""
+    assert note == "Gene annotation lookup unavailable for 1 Ensembl IDs."
+
+
+def test_load_gene_info_cache_drops_unresolved_placeholders(tmp_path):
+    cache_path = tmp_path / "gene_info_cache.json"
+    cache_path.write_text(
+        """{
+  "entries": {
+    "ENSG00000141510": {"ensembl_id": "ENSG00000141510", "gene_symbol": "ENSG00000141510", "gene_name": "", "gene_biotype": ""},
+    "ENSG00000157764": {"ensembl_id": "ENSG00000157764", "gene_symbol": "BRAF", "gene_name": "B-Raf proto-oncogene", "gene_biotype": "protein_coding"}
+  }
+}""",
+        encoding="utf-8",
+    )
+
+    out = _load_gene_info_cache(cache_path=cache_path)
+    assert "ENSG00000141510" not in out
+    assert out["ENSG00000157764"]["gene_symbol"] == "BRAF"
