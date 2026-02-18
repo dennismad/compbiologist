@@ -1,10 +1,12 @@
 # compbiologist
 
-Minimal starter for a virtual computational biologist with:
-- Public data ingestion (UniProt API)
-- Local GEO metadata search (GEOmetadb SQLite)
-- Local data processing (pandas)
-- Web UI for exploration (Flask)
+Virtual computational biology web app with:
+- GEO metadata search from local `GEOmetadb.sqlite`
+- analyzability checks and selective dataset loading
+- real differential expression (DESeq2 via `pydeseq2`) on GEO count-like matrices
+- interactive volcano plot and pathway enrichment
+- gene/pathway external links (Ensembl, GO/Reactome/WikiPathways/KEGG)
+- Docker-ready deployment
 
 ## Quick start
 
@@ -19,7 +21,8 @@ export NCBI_EMAIL="your_email@example.com"
 python -m app.main
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000).
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000).  
+On first load, protein summary artifacts are initialized automatically if missing.
 
 ## Run with Docker
 
@@ -68,21 +71,29 @@ Minimum practical disk recommendation:
 
 ## Web UI workflows
 
-- `Refresh Protein Data`: fetches UniProt records and re-runs local protein processing.
-- GEO search is at the top of the page and supports filters:
-  - species text filter
-  - experiment-type filter (`Single-cell RNA-seq`, `RNA-seq`, `Microarray`, etc.)
-  - `Only analyzable datasets` pre-check (attempts to keep only GEO entries with parseable expression matrices)
-  - non-analyzable rows are not selectable for loading
-- After search, select datasets and click `Load Selected Datasets`.
-- GEO detail tables/charts are shown only for loaded datasets.
-- Run `State Comparison Analysis` to generate:
-  - volcano plot
-  - top up/down genes
-  - pathway enrichment (up and down)
-  - real GEO matrix differential expression using DESeq2 (`pydeseq2`, counts-only)
-- if automatic grouping fails, the UI now requires manual sample-group selection before real DE can run
-  - current implementation analyzes one loaded GSE at a time (manual group selection supported when auto-detection fails)
+Workflow is explicit and step-based:
+
+1. `Step 1: Run Search`
+- Filters: query, species (top species + Other), experiment type, state filter, count.
+- Optional `Only analyzable datasets` to pre-filter to datasets likely usable for real DE.
+- GEO IDs are linked to GEO and PubMed when available.
+
+2. `Step 2: Run Load Selected`
+- Select analyzable rows from Step 1 table.
+- Loaded list is revalidated and restricted to analyzable datasets.
+
+3. `Step 3: Run Analysis`
+- Controls: comparison state, `padj` cutoff, `|log2FC|` cutoff, enrichment mode (`auto`, `gprofiler`, `local`).
+- Outputs: interactive volcano plot, top up/down genes, enrichment up/down tables.
+- Top genes include external Ensembl links and best-effort gene annotations.
+
+Manual grouping mode:
+- If automatic sample grouping fails, UI switches to manual group assignment.
+- In this mode, the main Step 3 run button is suppressed and a single run button appears in the manual grouping card.
+- Real analysis currently runs on one selected GSE at a time.
+
+Workflow reset:
+- `Start From Scratch` clears cached GEO search/load/analysis artifacts.
 
 ## Pipeline only (CLI)
 
@@ -96,6 +107,12 @@ With optional GEO fetch in the same run:
 python -m app.main --refresh --geo-query "single cell glioblastoma" --geo-retmax 20
 ```
 
+Run web server on a different interface/port:
+
+```bash
+python -m app.main --host 0.0.0.0 --port 8000
+```
+
 ## Developer commands
 
 ```bash
@@ -104,6 +121,9 @@ make install
 make check
 make test
 make run
+make docker-up
+make docker-down
+make docker-logs
 ```
 
 ## Local artifacts
@@ -114,9 +134,13 @@ make run
 - GEO raw JSON: `data/raw/geo_last_search.json`
 - GEO processed CSV: `data/processed/geo_datasets.csv`
 - GEO summary JSON: `data/processed/geo_summary.json`
+- Loaded GEO selection JSON/CSV: `data/processed/geo_loaded.json`, `data/processed/geo_loaded.csv`
+- Analysis result JSON/CSV: `data/processed/analysis_result.json`, `data/processed/analysis_dge.csv`
+- Gene annotation cache: `data/processed/gene_info_cache.json`
 
 ## Notes
 
-- Primary public sources: UniProt REST API and GEOmetadb SQLite (metadata), plus NCBI GEO FTP for matrix files.
-- GEO search responses and analyzability checks are cached locally in `data/processed/geo_cache.json`.
-- If local SQLite metadata search fails, the UI shows `Source: geo_sqlite_error`.
+- Primary public sources: GEOmetadb SQLite metadata, NCBI GEO FTP matrices, UniProt REST API, optional g:Profiler, optional Ensembl REST lookup.
+- GEO search responses and analyzability checks are cached in `data/processed/geo_cache.json`.
+- If local SQLite metadata search fails, source label can show `geo_sqlite_error` or fallback source labels.
+- In restricted/offline environments, Ensembl gene names may be unavailable; IDs and external links remain available.

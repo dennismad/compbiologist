@@ -1,4 +1,13 @@
 from __future__ import annotations
+"""Differential expression and enrichment helpers for Step 3 analysis.
+
+Supports:
+- real GEO DE via pydeseq2 (preferred)
+- local prototype DE fallback when requested
+- enrichment via g:Profiler with local pathway fallback
+- volcano payload generation
+- gene/pathway link and gene annotation hydration for rendered tables
+"""
 
 import hashlib
 import json
@@ -305,6 +314,7 @@ def _hydrate_pathway_links(rows: list[dict]) -> list[dict]:
 
 
 def hydrate_analysis_links(payload: dict | None) -> dict | None:
+    """Backfill gene/pathway links and cached gene annotations for persisted analysis payloads."""
     if payload is None:
         return None
     out = dict(payload)
@@ -552,6 +562,12 @@ def run_state_comparison_analysis(
     use_real_geo: bool = True,
     manual_choice: dict | None = None,
 ) -> dict:
+    """Run state comparison workflow and return a UI-ready analysis payload.
+
+    The function prioritizes real GEO expression analysis. If grouping cannot be
+    inferred automatically, it returns a payload that requests manual group
+    selection instead of presenting synthetic real-analysis results.
+    """
     dataset_ids = [str(x.get("accession") or x.get("gse") or x.get("uid") or "") for x in loaded_items]
     dataset_ids = [x for x in dataset_ids if x]
     enrichment_mode = _sanitize_enrichment_mode(enrichment_mode)
@@ -700,6 +716,7 @@ def run_state_comparison_analysis(
 
 
 def save_analysis_outputs(result_path: Path, dge_path: Path, payload: dict) -> None:
+    """Persist full analysis payload JSON and flattened DE rows CSV."""
     result_path.parent.mkdir(parents=True, exist_ok=True)
     dge_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -709,6 +726,7 @@ def save_analysis_outputs(result_path: Path, dge_path: Path, payload: dict) -> N
 
 
 def load_analysis_outputs(result_path: Path) -> dict | None:
+    """Load persisted analysis payload and hydrate links/annotations for display."""
     if not result_path.exists():
         return None
     payload = json.loads(result_path.read_text(encoding="utf-8"))

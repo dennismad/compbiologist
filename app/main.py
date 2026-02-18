@@ -1,4 +1,11 @@
 from __future__ import annotations
+"""Flask entrypoint for the interactive workflow UI.
+
+Routes implement a 3-step process:
+1) GEO search
+2) load selected analyzable datasets
+3) run state comparison analysis
+"""
 
 import argparse
 from pathlib import Path
@@ -22,6 +29,7 @@ from app.pipeline import (
 
 
 def create_app() -> Flask:
+    """Create and configure the Flask application."""
     base_dir = Path(__file__).resolve().parent.parent
     app = Flask(
         __name__,
@@ -215,6 +223,7 @@ def create_app() -> Flask:
 
 
 def main() -> None:
+    """CLI entrypoint for web-server mode or one-shot refresh mode."""
     parser = argparse.ArgumentParser(description="Virtual computational biologist web app")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=8000)

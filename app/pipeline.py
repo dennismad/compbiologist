@@ -1,4 +1,5 @@
 from __future__ import annotations
+"""Pipeline orchestration for protein refresh, GEO search/load, and analysis caching."""
 
 import json
 from datetime import datetime, timezone
@@ -51,11 +52,13 @@ def _dataset_id(row: dict) -> str:
 
 
 def ensure_data_dirs() -> None:
+    """Ensure required data directories exist."""
     RAW_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
     PROCESSED_DATA_PATH.parent.mkdir(parents=True, exist_ok=True)
 
 
 def run_pipeline() -> dict:
+    """Refresh protein data artifacts and write summary metadata."""
     ensure_data_dirs()
 
     fetch_result = fetch_uniprot_data(RAW_DATA_PATH)
@@ -88,6 +91,7 @@ def run_geo_pipeline(
     state_filter: str = "All",
     only_analyzable: bool = True,
 ) -> dict:
+    """Run paged GEO search with optional analyzability filtering and persist artifacts."""
     target = max(1, int(retmax))
     page_size = min(200, max(target * 3, 50))
     retstart = 0
@@ -162,6 +166,7 @@ def run_geo_pipeline(
 
 
 def run_geo_load_selection(selected_ids: list[str]) -> dict:
+    """Persist selected datasets from latest search after strict analyzability validation."""
     source_payload = load_cached_geo_payload()
     selected_set = {str(x).strip() for x in selected_ids if str(x).strip()}
     source_items = list(source_payload.get("items", []))
@@ -192,6 +197,7 @@ def run_comparison_analysis(
     enrichment_mode: str = "auto",
     manual_choice: dict | None = None,
 ) -> dict:
+    """Run state comparison on loaded datasets and persist analysis JSON/CSV outputs."""
     loaded = load_cached_loaded_geo_payload()
     payload = run_state_comparison_analysis(
         state_profile=state_profile,
@@ -207,6 +213,7 @@ def run_comparison_analysis(
 
 
 def load_cached_summary() -> dict | None:
+    """Load cached protein summary payload, if present."""
     if not SUMMARY_PATH.exists():
         return None
     return json.loads(SUMMARY_PATH.read_text(encoding="utf-8"))
@@ -223,6 +230,7 @@ def load_processed_dataframe() -> list[dict]:
 
 
 def load_cached_geo_payload() -> dict:
+    """Load last GEO search payload and enrich rows with derived display fields."""
     payload = load_cached_geo(GEO_RAW_JSON_PATH)
     if payload is None:
         return {
@@ -254,6 +262,7 @@ def load_cached_geo_payload() -> dict:
 
 
 def load_cached_loaded_geo_payload() -> dict:
+    """Load selected GEO datasets and keep only analyzable entries for downstream analysis."""
     payload = load_cached_loaded_geo(GEO_LOADED_JSON_PATH)
     if payload is None:
         return {
@@ -282,10 +291,12 @@ def load_cached_loaded_geo_payload() -> dict:
 
 
 def load_cached_analysis_payload() -> dict | None:
+    """Load cached analysis payload from disk."""
     return load_analysis_outputs(ANALYSIS_RESULT_PATH)
 
 
 def reset_workflow_state() -> None:
+    """Clear workflow cache/artifact files for a full UI reset."""
     targets: list[Path] = [
         GEO_RAW_JSON_PATH,
         GEO_PROCESSED_PATH,
